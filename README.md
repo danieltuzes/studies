@@ -2,25 +2,41 @@
 
 New fields I learn or give presentations about.
 
-- [random](#random)
-- [random-meta](#random-meta)
-  - [How to create presentations in different formats from markdown?](#how-to-create-presentations-in-different-formats-from-markdown)
-  - [Software requirements](#software-requirements)
-    - [VS Code for development environment](#vs-code-for-development-environment)
-    - [miniconda](#miniconda)
-    - [Miktex](#miktex)
-    - [revealjs](#revealjs)
-  - [Create html](#create-html)
-  - [Create pptx](#create-pptx)
-  - [Create pdf with latex](#create-pdf-with-latex)
+- [studies](#studies)
+  - [random](#random)
+  - [random-meta](#random-meta)
+    - [Workflow](#workflow)
+    - [OS-realted user privileges](#os-realted-user-privileges)
+    - [Software requirements](#software-requirements)
+      - [VS Code for development environment](#vs-code-for-development-environment)
+      - [miniconda](#miniconda)
+      - [Miktex](#miktex)
+      - [revealjs](#revealjs)
+        - [Copy the `simple2.css`](#copy-the-simple2css)
+    - [Create html](#create-html)
+    - [Create pptx](#create-pptx)
+    - [Create pdf with latex](#create-pdf-with-latex)
 
 ## random
 
-This is a presentation material and also an experiment how to create a presentation in markdown and convert it to powerpoint, revealjs and pdf for which I will use pandoc, the revealjs JS library and latex (from the Miktex distribution) and the beamer template.
+This is a presentation material and also an experiment how to create a presentation in markdown and convert it to powerpoint, html and pdf for which I will use pandoc, the revealjs JS library and latex (from the Miktex distribution) and the beamer template.
+
+This material represents a short, 45 min presentation on random numbers for those who knows a little about programming and mathematics.
+
+To view the results, check 
 
 ## random-meta
 
-### How to create presentations in different formats from markdown?
+Here I summarize how I created the content of the presentation.
+
+### Workflow
+
+1. I created the content first, with markdown, and was constantly checking it out in the preview window.
+2. Once the content was more or less ready, I compiled the presentation with latex, using the beamer template, into a pdf. I added the new slide separator into the source code this time. I had problems formatting figures, because as in general, text don't flow around figures in latex so I restricted the formattings to set the width of the pictures.
+3. Converted the markdown into pptx. To fit all the content into their slides and to format the slideshow, I created a `.potx` template file which mimics one of the beamer templates. The final solution is not perfect, and I didn't figure out how to correct the pictures in the slide show to not to be placed in a new slide and force another slide-break before the next content.
+4. Converted the markdown into html using revealjs. To fit the content onto the slides, I created a new style `simple2.css`.
+
+### OS-realted user privileges
 
 In a corporate environemnt, it is important to be aware of software limitations and I will keep this in mind during the presentation development. All software should be able to installed without admin privileges, or are so basic all corporates should allow them to require.
 
@@ -100,12 +116,16 @@ $ git submodule add https://github.com/hakimel/reveal.js.git
 
 This will download the repository and checkout the lates version.
 
+##### Copy the `simple2.css`
+
+I also included a new theme called `simple2.css`, placed in the root, which has to be copied to `\reveal.js\dist\theme\simple2.css"`. This has a smaller font-size so that all the text aimed to fit into a slide fit into a slide. (I used the beamer template from latex, with default settings, to decide how much content I should put onto one slide.)
+
 ### Create html
 
 Activate your python environment where you have `pandoc` installed and issue
 
 ```PowerShell
-(pandoc) PS C:\Users\tuzes\source\repos\studies> pandoc -t revealjs -o random.html --self-contained -V revealjs-url=reveal.js --mathjax random.md
+(pandoc) PS C:\Users\tuzes\source\repos\studies> pandoc -t revealjs -o random.html --self-contained -V revealjs-url=reveal.js --mathjax random.md -V theme=simple2
 ```
 
 This tells pandoc to
@@ -116,18 +136,19 @@ This tells pandoc to
 - to use the folder `reveal.js` as the source of the revealjs instead of `https://unpkg.com/reveal.js@^4/` to which you may have no access
 - [Use mathjax (from cloudfare)](https://pandoc.org/MANUAL.html#option--mathjax) to display math equations
 - [use input file](https://pandoc.org/MANUAL.html#synopsis) `random.md`
+- use the settings file I created, don't forget to [copy the simple2.css](#copy-the-simple2css) into the themes!
 
-Pandoc will then generate `random.html` within 10 s. Open it with Firefox and use the arrow keys for navigation.
+Pandoc will then generate `random.html` within 10 s. Open it with Firefox and use the arrow keys for navigation. pandoc may need to connect to the internet to download fonts.
 
 ### Create pptx
 
 Issue
 
 ```PowerShell
-(pandoc) PS C:\Users\tuzes\source\repos\studies> pandoc -o random.pptx random.md
+(pandoc) PS C:\Users\tuzes\source\repos\studies> pandoc -o random.pptx random.md --reference-doc '.\Beamer_template.potx'
 ```
 
-This will create a power point presentation file that can be opened with power point 2013 or newer.
+This will create a power point presentation file that can be opened with power point 2013 or newer. I also provided a template to format the presentation.
 
 ### Create pdf with latex
 
