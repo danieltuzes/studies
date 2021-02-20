@@ -114,11 +114,20 @@ tuzes@PCname MINGW64 ~/source/repos/studies (main)
 $ git submodule add https://github.com/hakimel/reveal.js.git
 ```
 
+With this, you will need to manually copy [`simple2.css`](#copy-the-simple2css). You can also try to clone my own fork containing the right style sheet too:
+
+```bash
+tuzes@PCname MINGW64 ~/source/repos/studies (main)
+$ git submodule add https://github.com/danieltuzes/reveal.js
+```
+
 This will download the repository and checkout the lates version.
 
 ##### Copy the `simple2.css`
 
 I also included a new theme called `simple2.css`, placed in the root, which has to be copied to `\reveal.js\dist\theme\simple2.css"`. This has a smaller font-size so that all the text aimed to fit into a slide fit into a slide. (I used the beamer template from latex, with default settings, to decide how much content I should put onto one slide.)
+
+> Update: I created my own fork of revealjs to include that one and only new css file. Now, you most probably don't need to copy `simple2.css`, but to clone my own fork.
 
 ### Create html
 
