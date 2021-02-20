@@ -279,3 +279,8 @@ TSWLatexianTemp*
 
 # VS Code settings
 .vscode/*
+
+# once off exception
+!random.pdf
+!random.pptx
+!random.html

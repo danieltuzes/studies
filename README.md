@@ -23,7 +23,7 @@ This is a presentation material and also an experiment how to create a presentat
 
 This material represents a short, 45 min presentation on random numbers for those who knows a little about programming and mathematics.
 
-To view the results, check 
+To view the results as of 20th of Febr, 2021, check the [random.pdf](random.pdf), [random.pptx](random.pptx) or [random.html](random.html) files!
 
 ## random-meta
 
