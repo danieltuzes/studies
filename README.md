@@ -25,6 +25,8 @@ This material represents a short, 45 min presentation on random numbers for thos
 
 To view the results as of 20th of Febr, 2021, check the [random.pdf](random.pdf), [random.pptx](random.pptx) or [random.html](random.html) files!
 
+Some small [python examples](python/numpy_random.py) using random numbers with a random walk implementation can be found in the python folder. To test the random number generator, [3 self-written test](python/random_test.py) are also developed. These tests just shows some basic ideas and don't represent a deep analysis, testing a prng is a whole science!
+
 ## random-meta
 
 Here I summarize how I created the content of the presentation.
