@@ -31,7 +31,8 @@
     with 64 bit precision, there is a chance of P1 = 1 - (1-(1/2^64))^1'000'000
     that this number is repeated, P = 5 * 10^-14. Because this propability
     is very low, most propably even the last element cannot be found again,
-    and there is no real need to check for a 2-long sequence."""
+    and there is no real need to check for a 2-long sequence.
+    I also implemented the test of the uniquness of the fist few numbers."""
 
 import numpy
 
@@ -40,7 +41,7 @@ HW1 = 200  # half-width of the region of interest in test 1, 200 is good enough
 LENGTH2 = 2000  # the length of the random vector, aim to 100'000
 
 LENGTH3 = 100000000  # the length of the random vector, aim to 100'000'000
-LENGTH3b = 100  # the uniqueness of the last LENGTH3b numbers
+LENGTH3b = 50  # the uniqueness of the last LENGTH3b numbers
 
 TC = {3}  # test cases, can be 1, 2 or 3, or any combination
 
@@ -78,7 +79,11 @@ if __name__ == "__main__":
         # A[LENGTH3-2] = A[LENGTH3-1]
 
         UNIQUE = True
+        for i in range(LENGTH3b):
+            UNIQUE &= numpy.where(A == A[i])[0][0] == i
+
         for i in range(LENGTH3-1, LENGTH3 - LENGTH3b, -1):
             UNIQUE &= numpy.where(A == A[i])[0][0] == i
 
-        print("The last", LENGTH3b, "elements are all unique:", UNIQUE, sep=" ")
+        print("The first and last", LENGTH3b,
+              "elements are all unique:", UNIQUE, sep=" ")
