@@ -4,7 +4,7 @@
     in the README.md file too. Check out examples.py for examples!"""
 
 import sys
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Tuple
 import numpy
 
 
@@ -103,17 +103,32 @@ class NamedPrng:
                 numpy.random.MT19937(self._seed_map(realization_id, ptype)))
 
     def _exclude_ids(self, arr: numpy.ndarray, ptype: str, exclude_ids: Iterable):
+        """Excludes the ids provided from the return array.
+            Useful if you need to remove some elements from the array.
+            Random numbers have been already generated and although you may
+            exclude them, they affected the state of the prng instance!"""
         # indices to exclude
-        exclude_ind = [self._particles[ptype][id] for id in exclude_ids]
+        exclude_ind = [self._particles[ptype][mid] for mid in exclude_ids]
 
         # delete the indices
         return numpy.delete(arr, exclude_ind)
 
+    def _include_ids(self, arr: numpy.ndarray, ptype: str, include_ids: Iterable):
+        """Include only the ids provided in the return array.
+            Random numbers have been already generated,
+            and memory is allocated for them once already. Although you may
+            exclude them, they affected the state of the prng instance!"""
+        keep_or_del = numpy.ones(arr.size, dtype=bool)
+        for mid in include_ids:
+            keep_or_del[self._particles[ptype][mid]] = False
+        return numpy.delete(arr, keep_or_del)
+
     def random(self,
                ptype: str,
-               exclude_ids: Iterable = None) -> numpy.ndarray:
+               exclude_ids: Iterable = None,
+               include_ids: Iterable = None) -> numpy.ndarray:
         """If _sourcefile is not set,
-            returns random numbers with uniform distribution on [0,1)
+            returns random numbers with uniform distribution on[0, 1)
             for each particle with type ptype that does not have the
             ID listed in excludeIDs.
 
@@ -125,6 +140,9 @@ class NamedPrng:
             should be omitted from the return value. The order number of the
             random numbers are read from the value of the correcponding ID key
             of the particles.
+
+            include_ids tells which particles IDs should be used for the random
+            number generation. Effective only if exclude_ids is None.
 
             If _sourcefile is set, reads in 64-bit floats from _sourcefile
             and does not modify the state of the prng instance."""
@@ -141,35 +159,51 @@ class NamedPrng:
 
         if exclude_ids is not None:
             ret = self._exclude_ids(ret, ptype, exclude_ids)
+        elif include_ids is not None:
+            ret = self._include_ids(ret, ptype, include_ids)
         return ret
 
     def normal(self, ptype: str,
                exclude_ids: Iterable = None,
-               loc: float = 0,
-               scale: float = 1) -> numpy.ndarray:
+               include_ids: Iterable = None,
+               params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
         """If _sourcefile is not set,
-            returns random numbers with a normal (aka Gaussian) distribution
+            returns random numbers with a normal(aka Gaussian) distribution
             with the properties passed for each of the particles ptype
-            that does not have the ID listed in excludeIDs.
+            that does not have the ID listed in exclude_ids or if
+            include_ids is set, if the ID is listed in include_ids.
 
             Modifies the state of the prng instance associated with ptype
             and advances as many steps as many particles with ptype can
-            be found, regardless the size of excludeIDs.
-
-            excludeIDs tells the IDs for which particles the random numbers
-            should be omitted from the return value. The order number of the
-            random numbers are read from the value of the correcponding ID key
-            of the particles.
+            be found, regardless the size of exclude_ids.
 
             If _sourcefile is set, reads in 64-bit floats from _sourcefile
-            and does not modify the state of the prng instance."""
+            and does not modify the state of the prng instance.
+
+            Parameters
+            ------------
+            ptype: str
+                For which particle should the engine generate random numbers
+            exclude_ids: Itereable = None
+                Tells the IDs for which particles the random numbers
+                should be omitted from the return value. The order number of the
+                random numbers are read from the value of the correcponding ID key
+                of the particles.
+            include_ids: Iterable = None,
+                Which particles IDs should be
+                used for the random number generation.
+                Effective only if exclude_ids is None.
+            params: Tuple[float,float] = (0,1)
+                The parameters passed to numpy's normal function,
+                i.e. the loc and scale paramters defining the
+                mean and the standard deviation."""
 
         amount = len(self._particles[ptype])
         ret = numpy.ndarray(amount, dtype=numpy.float64)
 
         if self._sourcefile is None:
             ret = self._engines[ptype].normal(
-                loc=loc, scale=scale, size=amount)
+                loc=params[0], scale=params[1], size=amount)
             ret = self._tee(ret)  # copy the random numbers if needed
         else:
             ret = numpy.fromfile(
@@ -177,6 +211,8 @@ class NamedPrng:
 
         if exclude_ids is not None:
             ret = self._exclude_ids(ret, ptype, exclude_ids)
+        elif include_ids is not None:
+            ret = self._include_ids(ret, ptype, include_ids)
         return ret
 
     def _tee(self, arr: numpy.ndarray) -> numpy.ndarray:

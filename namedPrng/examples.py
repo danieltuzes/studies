@@ -31,20 +31,31 @@ def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
 
         # generate random numbers for quarks
         mnprng.init_prngs(realization_id)
-        random_for_quarks = mnprng.normal("quarks")
+        random_for_quarks = mnprng.random("quarks")
 
         for key, rnd in zip(quarks, random_for_quarks):
             print(key, rnd)
 
-        # generate random numbers for a subset of quarks
-        print("--------------- now for the restricted set of particles ---------------")
+        # generate random numbers for a subset of quarks by excluding
+        print("--------- now for the restricted set of particles by excluding ---------")
 
         mnprng.init_prngs(realization_id)    # reset the prngs
 
-        random_for_quarks_subset = mnprng.normal(
+        random_for_quarks_subset = mnprng.random(
             "quarks", exclude_ids=remove_quarks)
 
         for key, rnd in zip(quarks_subset, random_for_quarks_subset):
+            print(key, rnd)
+
+        # generate random numbers for a subset of quarks by including
+        print("--------- now for the restricted set of particles by including ---------")
+
+        mnprng.init_prngs(realization_id)    # reset the prngs
+
+        random_for_quarks_subset_in = mnprng.random(
+            "quarks", include_ids=quarks_subset)
+
+        for key, rnd in zip(quarks_subset, random_for_quarks_subset_in):
             print(key, rnd)
         print("=======================================================================")
 
