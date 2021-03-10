@@ -8,7 +8,7 @@ atoms = {"H": 0, "He": 1, "Li": 2, "Be": 3}
 
 mparticles = {"quarks": quarks, "atoms": atoms}
 
-Mnprng = named_prng.NamedPrng(mparticles)
+Mnprng = named_prng.NamedPrng(mparticles, teefile="tee.dat")
 
 for realization_id in range(3):
     print("realization_id = ", realization_id)
@@ -34,3 +34,6 @@ for realization_id in range(3):
     for key, rnd in zip(quarks_constr, random_for_quarks_constr):
         print(key, rnd)
     print("=============================================================================")
+
+print("All the random numbers generated so far:")
+print(named_prng.NamedPrng.get_rnds_from_file("tee.dat"))

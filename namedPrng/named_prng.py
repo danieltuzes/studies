@@ -32,6 +32,7 @@ class NamedPrng:
         _seed_map(self, realization: int, ptype: str) -> int:
         init_prngs(self, realization_id: int):
         random(self, ptype: str, exclude_ids=None) -> numpy.ndarray:
+        _tee(arr: numpy.ndarray) -> numpy.ndarray:
         """
 
     N_max = 100  # maximum number of particle types
@@ -92,6 +93,7 @@ class NamedPrng:
             random numbers are read from the value of the correcponding ID key
             of the particles."""
         ret = self._engines[ptype].random(len(self._particles[ptype]))
+        ret = self._tee(ret)  # copy the random numbers if needed
         if exclude_ids is not None:
             ret = self._exclude_ids(ret, ptype, exclude_ids)
         return ret
@@ -114,6 +116,21 @@ class NamedPrng:
             of the particles."""
         ret = self._engines[ptype].normal(
             loc=loc, scale=scale, size=len(self._particles[ptype]))
+        ret = self._tee(ret)  # copy the random numbers if needed
         if exclude_ids is not None:
             ret = self._exclude_ids(ret, ptype, exclude_ids)
+        return ret
+
+    def _tee(self, arr: numpy.ndarray) -> numpy.ndarray:
+        """Copy the input array arr to _teefile if exists and return the array."""
+        if self._teefile is not None:
+            with open(self._teefile, "ab") as ofile:
+                arr.tofile(ofile)
+        return arr
+
+    @classmethod
+    def get_rnds_from_file(cls, teefile: str) -> numpy.ndarray:
+        """Returns the value in a file where random numbers are copied."""
+        with open(teefile, "rb") as ifile:
+            ret = numpy.fromfile(ifile, dtype=numpy.float64)
         return ret
