@@ -4,6 +4,8 @@ New fields I learn or give presentations about.
 
 - [studies](#studies)
   - [random](#random)
+  - [random test](#random-test)
+  - [named random number engine](#named-random-number-engine)
   - [random-meta](#random-meta)
     - [Workflow](#workflow)
     - [OS-realted user privileges](#os-realted-user-privileges)
@@ -26,6 +28,23 @@ This material represents a short, 45 min presentation on random numbers for thos
 To view the results as of 20th of Febr, 2021, check the [random.pdf](random.pdf), [random.pptx](random.pptx) or [random.html](random.html) files!
 
 Some small [python examples](python/numpy_random.py) using random numbers with a random walk implementation can be found in the python folder. To test the random number generator, [3 self-written test](python/random_test.py) are also developed. These tests just shows some basic ideas and don't represent a deep analysis, testing a prng is a whole science!
+
+## random test
+
+Although [standardized tests for prngs](https://en.wikipedia.org/wiki/TestU01) have been introduced [decades ago](https://en.wikipedia.org/wiki/Diehard_tests), it can be still interesting to implement some of your own ideas. Most propably, those have been already implemented, but it is good to practice programming and get a deeper insight into random number generators.
+
+In [random_test.py](python/random_test.py), you can find some (around 4) tests to check the quality of the Mersenne Twister prng. I was curious if any correlation can be found within the prn sequences initiated with adjacent seeds. Spoiler alert: I didn't find any correlation.
+
+## named random number engine
+
+In one of my professional tasks, I had to implement a prng container for Monte Carlo simulations. The purpose of this container is to improve prn generation by supporting multiple seeds, and instead of seeds, to support named seeds. 
+
+- The first step is to print out all the random numbers used by the model, which produced the result A, store them in a file,
+- and then use this super container to feed the model with the same numbers. This time I should get the same result A.
+- Then the file-based random number feed has to replaced by a prng algorithm, like Mersenne Twister. This time the model should produce different result B. I can write out the random numbers again, into a file, and use the file instead of the algorithm producing the same B result. So we can see how changing the random number engine from a basic math algorithm to file-based solution keeps the same result A.
+- Then we change the random numbers, and get result B, but the result remains the same if we change the source of random numbers from a file to a math algorithm again.
+
+The details of the class can be found in the [readme of namedPrng](namedPrng/README.md).
 
 ## random-meta
 
