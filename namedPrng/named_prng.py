@@ -79,7 +79,7 @@ class NamedPrng:
                 self._teefile = open(teefilename, "ab")
             except OSError as err:
                 print("Cannot initialize a NamedPrng instance,",
-                      "because teefilename is set but OSError occured",
+                      "because teefilename is set but OSError occurred",
                       "while opening the file for binary appending.",
                       "No _teefile will be used.",
                       "Error details:", err)
@@ -93,7 +93,7 @@ class NamedPrng:
                 self._sourcefile = open(sourcefilename, "rb")
             except OSError as err:
                 print("Cannot initialize a NamedPrng instance,",
-                      "because sourcefilename is set but OSError occured",
+                      "because sourcefilename is set but OSError occurred",
                       "while opening the file for binary reading.",
                       "prng will be used instead of the _sourcefile.",
                       "Error details:", err)
@@ -220,7 +220,7 @@ class NamedPrng:
             filter: Tuple[Iterable, Iterable] = (None, None),
                 Filters the output based on exclusion xor include only method.
 
-                - exclude_ids: Itereable = None
+                - exclude_ids: Iterable = None
                     Tells the IDs for which particles the random numbers
                     should be omitted from the return value. The order number of the
                     random numbers are read from the value of the correcponding ID key
@@ -270,5 +270,5 @@ class NamedPrng:
                 return ret
         except OSError as err:
             print("Cannot show the random numbers from the file,",
-                  "because an OSError occured:", err)
+                  "because an OSError occurred:", err)
             return numpy.ndarray(0)

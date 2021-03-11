@@ -1,9 +1,9 @@
 """examples.py
     Here we call named_prng and test it with some cases. This file proves:
-    
+
     - random numbers can be generated
       for a given particle set (aka particle type)
-    - the random numbers generated can be restrcited by either
+    - the random numbers generated can be restricted by either
       excluding some particles, or only by allowing a set of them
     - for the same particle type, random numbers can be generated
       for different purposes
@@ -16,7 +16,7 @@ import named_prng
 quarks = {"up": 0, "down": 1, "charm": 2, "strange": 3, "top": 4, "bottom": 5}
 
 # atoms is another particle type with 4 different IDs as keys.
-# We wont't use atoms btw.
+# We won't use atoms btw.
 atoms = {"H": 0, "He": 1, "Li": 2, "Be": 3}
 
 # the dict of dict, all particles together,
