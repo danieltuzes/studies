@@ -280,8 +280,11 @@ TSWLatexianTemp*
 # Makeindex log files
 *.lpz
 
-# VS Code settings
+# VS and VS Code settings
 .vscode/*
+.vs/*
+**/*.pyproj
+**/*.sln
 
 # once off exception
 !random.pdf

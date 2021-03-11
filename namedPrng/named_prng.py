@@ -10,21 +10,32 @@ import numpy
 
 class NamedPrng:
     """The implementation of the named_prng. Stores multiple prng instances,
-        and a seed-assignment logic for different particle types and IDs.
+        and a seed-assignment logic for different
+        particle types, purposes and realizations.
 
         Attributes
         -----------
         N_max: int
-            Maximum number of particle types. Changing this value breaks
-            realization-wise comparison possibility with older runs. The
-            number of particle types must be smaller than this.
+            Maximum number of maximum number of particle type - purpose
+            combination. Changing this value breaks realization-wise comparison
+            possibility with older runs. The number of particle type - purpose
+            combination must be smaller than this.
         _particles: Dict[str,Dict[str,int]]
             stores the name of different particle types as key,
             and a dict containing the the particles IDs as keys,
             and the order number of particles as the values.
         _ptype_ind: Dict[str,int]
             The order indices of the particle types.
+        _purposes: Dict[str,int]
+            Random numbers can be generated for a particle type for different
+            purposes, and instead of keeping the same set of particles
+            in the _particles dictionary with different particle type name for
+            different purposes, it is more econonomical memory-wise to store
+            he set of particles in _particles only once and store the
+            set of possible purposes in a separate dictionary.
         _engines: Dict[str, numpy.random.Generator]
+            The prng instances of type Mersenne Twister. Seeds are generated
+            with _seed_map based on the realization, particle type and purpose.
         _teefile: BinaryIO
             If set, all random numbers generated are copied to this file.
             The file is opened with the initializator and closed once
@@ -42,20 +53,25 @@ class NamedPrng:
         _tee(arr: numpy.ndarray) -> numpy.ndarray:
         """
 
-    N_max = 100  # maximum number of particle types
+    N_max = 100  # maximum number of particle type - purpose combination
 
     def __init__(self,
                  particles: Dict[str, Dict[str, int]],
-                 teefilename: str = None,
+                 purposes: Dict[str, int],
                  realization_id: int = None,
-                 sourcefilename: str = None):
+                 filenames: Tuple[str, str] = (None, None)):
+        """filenames is the tuple of (teefilename, sourcefilename)"""
         self._particles = particles
-        if len(particles) > self.N_max:  # sanity check
+        if len(particles) * len(purposes) > self.N_max:  # sanity check
             sys.exit("The prng is fed with", len(particles), "number of types,",
                      "but only", self.N_max,
                      "different types are supported. Program terminates.")
 
         self._ptype_ind = {key: index for index, key in enumerate(particles)}
+
+        self._purposes = purposes
+
+        teefilename = filenames[0]
         if teefilename is None:  # where to copy the generated prn-s
             self._teefile = None
         else:
@@ -69,6 +85,7 @@ class NamedPrng:
                       "Error details:", err)
                 self._teefile = None
 
+        sourcefilename = filenames[1]
         if sourcefilename is None:  # from where to read the random numbers
             self._sourcefile = None
         else:
@@ -87,20 +104,25 @@ class NamedPrng:
         if realization_id is not None:
             self.init_prngs(realization_id)
 
-    def _seed_map(self, realization: int, ptype: str) -> int:
+    def _seed_map(self, realization: int, ptype: str, purpose: str) -> int:
         """Assigns a seed to a realization and particle type."""
         ptype_order = self._ptype_ind[ptype]
-        seed = realization * self.N_max + ptype_order
+        seed = realization * self.N_max + \
+            self._purposes[purpose] * len(self._ptype_ind) + \
+            ptype_order
         return seed
 
     def init_prngs(self, realization_id: int):
-        """Initialize all prngs for a given realization ID
+        """Initialize all prngs for a given realization ID,
+            for all the possible particle type and purpose combination,
             and deletes all previous prng instances stored in the object."""
 
         self._engines = dict()
         for ptype in self._particles:
-            self._engines[ptype] = numpy.random.Generator(
-                numpy.random.MT19937(self._seed_map(realization_id, ptype)))
+            self._engines[ptype] = dict()
+            for purpose in self._purposes:
+                self._engines[ptype][purpose] = numpy.random.Generator(
+                    numpy.random.MT19937(self._seed_map(realization_id, ptype, purpose)))
 
     def _exclude_ids(self, arr: numpy.ndarray, ptype: str, exclude_ids: Iterable):
         """Excludes the ids provided from the return array.
@@ -125,16 +147,18 @@ class NamedPrng:
 
     def random(self,
                ptype: str,
-               exclude_ids: Iterable = None,
-               include_ids: Iterable = None) -> numpy.ndarray:
+               purpose: str,
+               id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
         """If _sourcefile is not set,
             returns random numbers with uniform distribution on[0, 1)
-            for each particle with type ptype that does not have the
-            ID listed in excludeIDs.
+            for each particle with type ptype for the specified purpose
+            that matches the filter criterion id_filter.
+
+            id_filter is a tuple of (exclude_ids, include_ids).
 
             Modifies the state of the prng instance associated with ptype
             and advances as many steps as many particles with ptype can
-            be found, regardless the size of excludeIDs.
+            be found, regardless the id_filter.
 
             excludeIDs tells the IDs for which particles the random numbers
             should be omitted from the return value. The order number of the
@@ -151,31 +175,36 @@ class NamedPrng:
         ret = numpy.ndarray(amount, dtype=numpy.float64)
 
         if self._sourcefile is None:
-            ret = self._engines[ptype].random(amount)
+            ret = self._engines[ptype][purpose].random(amount)
             ret = self._tee(ret)  # copy the random numbers if needed
         else:
             ret = numpy.fromfile(
                 self._sourcefile, dtype=numpy.float64, count=amount)
 
+        exclude_ids = id_filter[0]
+        include_ids = id_filter[1]
         if exclude_ids is not None:
             ret = self._exclude_ids(ret, ptype, exclude_ids)
         elif include_ids is not None:
             ret = self._include_ids(ret, ptype, include_ids)
         return ret
 
-    def normal(self, ptype: str,
-               exclude_ids: Iterable = None,
-               include_ids: Iterable = None,
+    def normal(self,
+               ptype: str,
+               purpose: str,
+               id_filter: Tuple[Iterable, Iterable] = (None, None),
                params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
         """If _sourcefile is not set,
             returns random numbers with a normal(aka Gaussian) distribution
             with the properties passed for each of the particles ptype
-            that does not have the ID listed in exclude_ids or if
-            include_ids is set, if the ID is listed in include_ids.
+            and for the specified purpose
+            that matches the filter criterion id_filter.
+
+            id_filter is a tuple of (exclude_ids, include_ids).
 
             Modifies the state of the prng instance associated with ptype
             and advances as many steps as many particles with ptype can
-            be found, regardless the size of exclude_ids.
+            be found, regardless the id_filter.
 
             If _sourcefile is set, reads in 64-bit floats from _sourcefile
             and does not modify the state of the prng instance.
@@ -184,15 +213,23 @@ class NamedPrng:
             ------------
             ptype: str
                 For which particle should the engine generate random numbers
-            exclude_ids: Itereable = None
-                Tells the IDs for which particles the random numbers
-                should be omitted from the return value. The order number of the
-                random numbers are read from the value of the correcponding ID key
-                of the particles.
-            include_ids: Iterable = None,
-                Which particles IDs should be
-                used for the random number generation.
-                Effective only if exclude_ids is None.
+            purpose: str
+                For what purpose would you like to generate the random numbers.
+                For different purpose, you get different set of random numbers,
+                and prng instances are independent purpose-wise.
+            filter: Tuple[Iterable, Iterable] = (None, None),
+                Filters the output based on exclusion xor include only method.
+
+                - exclude_ids: Itereable = None
+                    Tells the IDs for which particles the random numbers
+                    should be omitted from the return value. The order number of the
+                    random numbers are read from the value of the correcponding ID key
+                    of the particles.
+                - include_ids: Iterable = None,
+                    Which particles IDs should be
+                    used for the random number generation.
+                    Effective only if exclude_ids is None.
+
             params: Tuple[float,float] = (0,1)
                 The parameters passed to numpy's normal function,
                 i.e. the loc and scale paramters defining the
@@ -202,13 +239,15 @@ class NamedPrng:
         ret = numpy.ndarray(amount, dtype=numpy.float64)
 
         if self._sourcefile is None:
-            ret = self._engines[ptype].normal(
+            ret = self._engines[ptype][purpose].normal(
                 loc=params[0], scale=params[1], size=amount)
             ret = self._tee(ret)  # copy the random numbers if needed
         else:
             ret = numpy.fromfile(
                 self._sourcefile, dtype=numpy.float64, count=amount)
 
+        exclude_ids = id_filter[0]
+        include_ids = id_filter[1]
         if exclude_ids is not None:
             ret = self._exclude_ids(ret, ptype, exclude_ids)
         elif include_ids is not None:
