@@ -4,7 +4,7 @@
     in the README.md file too. Check out examples.py for examples!"""
 
 import sys
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, Tuple, List
 import numpy
 
 
@@ -16,21 +16,26 @@ class NamedPrng:
         Attributes
         -----------
         N_max: int
-            Maximum number of maximum number of particle type - purpose
+            Maximum number of particle type - purpose
             combination. Changing this value breaks realization-wise comparison
             possibility with older runs. The number of particle type - purpose
-            combination must be smaller than this.
+            combination must be smaller than this. The seed value has a jump of
+            size N_max between different realizations.
+        N_ptl: int
+            Limit of particle types, the maximum number of particle types.
+            Changing this value breaks realization-wise comparison
+            possibility with older runs. From one purpose to another,
+            for the same particle type, seed value jumps with this value.
+            number of particle types * N_ptl =< N_max must hold.
         _particles: Dict[str,Dict[str,int]]
             stores the name of different particle types as key,
             and a dict containing the the particles IDs as keys,
             and the order number of particles as the values.
-        _ptype_ind: Dict[str,int]
-            The order indices of the particle types.
-        _purposes: Dict[str,int]
+        _purposes: List[str]
             Random numbers can be generated for a particle type for different
             purposes, and instead of keeping the same set of particles
             in the _particles dictionary with different particle type name for
-            different purposes, it is more econonomical memory-wise to store
+            different purposes, it is more economical memory-wise to store
             he set of particles in _particles only once and store the
             set of possible purposes in a separate dictionary.
         _engines: Dict[str, numpy.random.Generator]
@@ -45,29 +50,43 @@ class NamedPrng:
             with the numpy random generator (e.g. Mersenne Twister). It is
             the user's responsibility to make sure the file has enough random
             numbers and that these numbers have the required properties.
+
         Methods
         -----------
         _seed_map(self, realization: int, ptype: str) -> int:
         init_prngs(self, realization_id: int):
         random(self, ptype: str, exclude_ids=None) -> numpy.ndarray:
         _tee(arr: numpy.ndarray) -> numpy.ndarray:
+        _exclude_ids(self, arr: numpy.ndarray, ptype: str, exclude_ids: Iterable):
+        _include_ids(self, arr: numpy.ndarray, ptype: str, include_ids: Iterable):
+        random(self,
+               ptype: str,
+               purpose: str,
+               id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
+        normal(self,
+               ptype: str,
+               purpose: str,
+               id_filter: Tuple[Iterable, Iterable] = (None, None),
+               params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
+        @classmethod
+        def get_rnds_from_file(cls, teefilename: str) -> numpy.ndarray:
         """
 
-    N_max = 100  # maximum number of particle type - purpose combination
+    N_max = 100  # maximum number of particle type - purpose combinations
+    N_ptl = 10   # maximum number of particle types
 
     def __init__(self,
                  particles: Dict[str, Dict[str, int]],
-                 purposes: Dict[str, int],
+                 purposes: List[str],
                  realization_id: int = None,
                  filenames: Tuple[str, str] = (None, None)):
         """filenames is the tuple of (teefilename, sourcefilename)"""
         self._particles = particles
-        if len(particles) * len(purposes) > self.N_max:  # sanity check
-            sys.exit("The prng is fed with", len(particles), "number of types,",
-                     "but only", self.N_max,
-                     "different types are supported. Program terminates.")
-
-        self._ptype_ind = {key: index for index, key in enumerate(particles)}
+        if len(particles) > self.N_ptl or len(purposes) * self.N_ptl > self.N_max:
+            sys.exit("The NamedPrng is fed with", len(particles),
+                     "number of types, and with", len(purposes),
+                     "number of purposes, while N_ptl =", self.N_ptl,
+                     "and N_max =", self.N_max, ". Program terminates.")
 
         self._purposes = purposes
 
@@ -106,9 +125,9 @@ class NamedPrng:
 
     def _seed_map(self, realization: int, ptype: str, purpose: str) -> int:
         """Assigns a seed to a realization and particle type."""
-        ptype_order = self._ptype_ind[ptype]
+        ptype_order = list(self._particles.keys()).index(ptype)
         seed = realization * self.N_max + \
-            self._purposes[purpose] * len(self._ptype_ind) + \
+            self._purposes.index(purpose) * self.N_ptl + \
             ptype_order
         return seed
 

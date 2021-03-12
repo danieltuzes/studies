@@ -39,7 +39,7 @@ for rid in remove_quarks:
 # simulations are comparable realization-wise
 # if the order is kept the same. Since py 3.6,
 # dict is ordered, but sets are not
-mpurposes = {"random_walk": 0, "radioactive_decay": 1}
+mpurposes = ["random_walk", "radioactive_decay"]
 
 
 def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
