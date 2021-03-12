@@ -54,11 +54,11 @@ class NamedPrng:
         Methods
         -----------
         _seed_map(self, realization: int, ptype: str) -> int:
-        init_prngs(self, realization_id: int):
+        init_prngs(self, realization_id: int) -> None:
         random(self, ptype: str, exclude_ids=None) -> numpy.ndarray:
         _tee(arr: numpy.ndarray) -> numpy.ndarray:
-        _exclude_ids(self, arr: numpy.ndarray, ptype: str, exclude_ids: Iterable):
-        _include_ids(self, arr: numpy.ndarray, ptype: str, include_ids: Iterable):
+        _exclude_ids(self, arr: numpy.ndarray, ptype: str, exclude_ids: Iterable) -> None:
+        _include_ids(self, arr: numpy.ndarray, ptype: str, include_ids: Iterable) -> None:
         random(self,
                ptype: str,
                purpose: str,
@@ -69,7 +69,7 @@ class NamedPrng:
                id_filter: Tuple[Iterable, Iterable] = (None, None),
                params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
         @classmethod
-        def get_rnds_from_file(cls, teefilename: str) -> numpy.ndarray:
+        get_rnds_from_file(cls, teefilename: str) -> numpy.ndarray:
         """
 
     N_max = 100  # maximum number of particle type - purpose combinations
@@ -79,7 +79,7 @@ class NamedPrng:
                  particles: Dict[str, Dict[str, int]],
                  purposes: List[str],
                  realization_id: int = None,
-                 filenames: Tuple[str, str] = (None, None)):
+                 filenames: Tuple[str, str] = (None, None)) -> None:
         """filenames is the tuple of (teefilename, sourcefilename)"""
         self._particles = particles
         if len(particles) > self.N_ptl or len(purposes) * self.N_ptl > self.N_max:
@@ -131,19 +131,29 @@ class NamedPrng:
             ptype_order
         return seed
 
-    def init_prngs(self, realization_id: int):
-        """Initialize all prngs for a given realization ID,
-            for all the possible particle type and purpose combination,
-            and deletes all previous prng instances stored in the object."""
+    def init_prngs(self,
+                   realization_id: int,
+                   ptypes: List[str] = None,
+                   purposes: List[str] = None) -> None:
+        """Initialize prngs for a given realization ID, and
+            for all or a given list of ptypes and
+            for all or a given list of purposes.
+            If the list is None, all possibilities are initialized"""
+        if ptypes is None:
+            ptypes = self._particles.keys()
+        if purposes is None:
+            purposes = self._purposes
 
-        self._engines = dict()
-        for ptype in self._particles:
+        for ptype in ptypes:
             self._engines[ptype] = dict()
-            for purpose in self._purposes:
+            for purpose in purposes:
                 self._engines[ptype][purpose] = numpy.random.Generator(
                     numpy.random.MT19937(self._seed_map(realization_id, ptype, purpose)))
 
-    def _exclude_ids(self, arr: numpy.ndarray, ptype: str, exclude_ids: Iterable):
+    def _exclude_ids(self,
+                     arr: numpy.ndarray,
+                     ptype: str,
+                     exclude_ids: Iterable) -> numpy.ndarray:
         """Excludes the ids provided from the return array.
             Useful if you need to remove some elements from the array.
             Random numbers have been already generated and although you may
@@ -154,7 +164,10 @@ class NamedPrng:
         # delete the indices
         return numpy.delete(arr, exclude_ind)
 
-    def _include_ids(self, arr: numpy.ndarray, ptype: str, include_ids: Iterable):
+    def _include_ids(self,
+                     arr: numpy.ndarray,
+                     ptype: str,
+                     include_ids: Iterable) -> numpy.ndarray:
         """Include only the ids provided in the return array.
             Random numbers have been already generated,
             and memory is allocated for them once already. Although you may
@@ -169,15 +182,15 @@ class NamedPrng:
                purpose: str,
                id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
         """If _sourcefile is not set,
-            returns random numbers with uniform distribution on[0, 1)
+            returns a 1D array of random numbers
+            with a uniform distribution on[0, 1)
             for each particle with type ptype for the specified purpose
             that matches the filter criterion id_filter.
+            The prngs must be initialized before this call by
+            providing the realization_id at initialization time
+            or by calling :func:`init_prngs`.
 
             id_filter is a tuple of (exclude_ids, include_ids).
-
-            Modifies the state of the prng instance associated with ptype
-            and advances as many steps as many particles with ptype can
-            be found, regardless the id_filter.
 
             excludeIDs tells the IDs for which particles the random numbers
             should be omitted from the return value. The order number of the
@@ -186,6 +199,10 @@ class NamedPrng:
 
             include_ids tells which particles IDs should be used for the random
             number generation. Effective only if exclude_ids is None.
+
+            Modifies the state of the prng instance associated with ptype
+            and advances as many steps as many particles with ptype can
+            be found, regardless the id_filter.
 
             If _sourcefile is set, reads in 64-bit floats from _sourcefile
             and does not modify the state of the prng instance."""
@@ -208,51 +225,133 @@ class NamedPrng:
             ret = self._include_ids(ret, ptype, include_ids)
         return ret
 
-    def normal(self,
-               ptype: str,
-               purpose: str,
-               id_filter: Tuple[Iterable, Iterable] = (None, None),
-               params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
+    def random_r(self,
+                 seed_args: Tuple[str, str, Tuple[int, int]],
+                 id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
         """If _sourcefile is not set,
-            returns random numbers with a normal(aka Gaussian) distribution
-            with the properties passed for each of the particles ptype
-            and for the specified purpose
+            returns a 2D array of random numbers with a
+            uniform distribution on[0, 1) for all realization ID and
+            for each particle with type ptype for the specified purpose
             that matches the filter criterion id_filter.
+            Automatically initialize the prngs.
+            The behavior is identical to calling :func`init_prngs` and
+            :func:`random` with the proper realization_id parameters.
 
-            id_filter is a tuple of (exclude_ids, include_ids).
+            Parameters
+            -----------------------
+            seed_args: Tuple(str, str, Tuple(int,int)):
+                (ptype, purpose, (realization_id_start, realization_id_end))
+                Values that affect the seeds.
+                The range [realization_id_start, realization_id_end)
+                will be used to generate the 2D array of random numbers.
+
+            id_filter: Tuple[Iterable, Iterable] = (None, None)
+                (exclude_ids, include_ids)
+
+                - exclude_ids tells the IDs for which particles the random
+                numbers should be omitted from the return value. The order
+                number of the random numbers are read from the value of the
+                correcponding ID key of the particles.
+                - include_ids tells which particles IDs should be used for the
+                random number generation. Effective only if exclude_ids is None.
+
+            Returns
+            -----------------------
+            numpy.ndarray:
+                shape(number of realizations, number of particles)
+                It has as many rows as many realization_id are in the range of
+                [realization_id_start, realization_id_end),
+                and it has as many columns as many particles with type ptype
+                can be found, and it has dtype=numpy.float64.
+
 
             Modifies the state of the prng instance associated with ptype
             and advances as many steps as many particles with ptype can
             be found, regardless the id_filter.
 
             If _sourcefile is set, reads in 64-bit floats from _sourcefile
-            and does not modify the state of the prng instance.
+            and does not modify the state of the prng instance."""
+
+        ptype = seed_args[0]
+        purpose = seed_args[1]
+        r_start = seed_args[2][0]
+        r_end = seed_args[2][1]
+
+        amount = len(self._particles[ptype])
+        ret = numpy.ndarray((r_end-r_start, amount), dtype=numpy.float64)
+        exclude_ids = id_filter[0]
+        include_ids = id_filter[1]
+
+        if self._sourcefile is None:
+            for realization_id in range(r_start, r_end):
+                self.init_prngs(realization_id, [ptype], [purpose])
+                ret_col = self._engines[ptype][purpose].random(amount)
+
+                if exclude_ids is not None:
+                    ret_col = self._exclude_ids(ret_col, ptype, exclude_ids)
+                elif include_ids is not None:
+                    ret_col = self._include_ids(ret_col, ptype, include_ids)
+
+                r_id = realization_id - r_start  # starts from 0
+                ret[r_id] = ret_col
+            ret = self._tee(ret)  # copy the random numbers if needed
+        else:
+            ret = numpy.fromfile(
+                self._sourcefile,
+                dtype=numpy.float64,
+                count=amount * (r_end-r_start))
+
+        return ret
+
+    def normal(self,
+               ptype: str,
+               purpose: str,
+               id_filter: Tuple[Iterable, Iterable] = (None, None),
+               params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
+        """If _sourcefile is not set,
+            returns a 1D array of random numbers
+            with a normal (aka Gaussian) distribution
+            with the properties passed,
+            for each of the particles with type ptype
+            and for the specified purpose
+            that matches the filter criterion id_filter.
+            The prngs must be initialized before this call by
+            providing the realization_id at initialization time
+            or by calling :func:`init_prngs`.
 
             Parameters
             ------------
             ptype: str
                 For which particle should the engine generate random numbers
+
             purpose: str
                 For what purpose would you like to generate the random numbers.
                 For different purpose, you get different set of random numbers,
                 and prng instances are independent purpose-wise.
-            filter: Tuple[Iterable, Iterable] = (None, None),
-                Filters the output based on exclusion xor include only method.
 
-                - exclude_ids: Iterable = None
-                    Tells the IDs for which particles the random numbers
-                    should be omitted from the return value. The order number of the
-                    random numbers are read from the value of the correcponding ID key
-                    of the particles.
-                - include_ids: Iterable = None,
-                    Which particles IDs should be
-                    used for the random number generation.
-                    Effective only if exclude_ids is None.
+            id_filter: Tuple[Iterable, Iterable] = (None, None)
+                (exclude_ids, include_ids)
+
+                - exclude_ids tells the IDs for which particles the random
+                numbers should be omitted from the return value. The order
+                number of the random numbers are read from the value of the
+                correcponding ID key of the particles.
+                - include_ids tells which particles IDs should be used for the
+                random number generation. Effective only if exclude_ids is None.
 
             params: Tuple[float,float] = (0,1)
                 The parameters passed to numpy's normal function,
                 i.e. the loc and scale paramters defining the
-                mean and the standard deviation."""
+                mean and the standard deviation.
+
+
+
+            Modifies the state of the prng instance associated with ptype
+            and advances as many steps as many particles with ptype can
+            be found, regardless the id_filter.
+
+            If _sourcefile is set, reads in 64-bit floats from _sourcefile
+            and does not modify the state of the prng instance."""
 
         amount = len(self._particles[ptype])
         ret = numpy.ndarray(amount, dtype=numpy.float64)
@@ -271,6 +370,90 @@ class NamedPrng:
             ret = self._exclude_ids(ret, ptype, exclude_ids)
         elif include_ids is not None:
             ret = self._include_ids(ret, ptype, include_ids)
+        return ret
+
+    def normal_r(self,
+                 seed_args: Tuple[str, str, Tuple[int, int]],
+                 id_filter: Tuple[Iterable, Iterable] = (None, None),
+                 params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
+        """If _sourcefile is not set,
+            returns a 2D array of random numbers with a
+            normal (aka Gaussian) distribution with the properties passed,
+            for all realization ID and for each particle with type ptype for
+            the specified purpose that matches the filter criterion id_filter.
+            Automatically initialize the prngs.
+            The behavior is identical to calling :func`init_prngs` and
+            :func:`normal` with the proper realization_id parameters.
+
+            Parameters
+            -----------------------
+            seed_args: Tuple(str, str, Tuple(int,int)):
+                (ptype, purpose, (realization_id_start, realization_id_end))
+                Values that affect the seeds.
+                The range [realization_id_start, realization_id_end)
+                will be used to generate the 2D array of random numbers.
+
+            id_filter: Tuple[Iterable, Iterable] = (None, None)
+                (exclude_ids, include_ids)
+
+                - exclude_ids tells the IDs for which particles the random
+                numbers should be omitted from the return value. The order
+                number of the random numbers are read from the value of the
+                correcponding ID key of the particles.
+                - include_ids tells which particles IDs should be used for the
+                random number generation. Effective only if exclude_ids is None.
+
+            params: Tuple[float,float] = (0,1)
+                The parameters passed to numpy's normal function,
+                i.e. the loc and scale paramters defining the
+                mean and the standard deviation.
+
+            Returns
+            -----------------------
+            numpy.ndarray:
+                shape(number of realizations, number of particles)
+                It has as many rows as many realization_id are in the range of
+                [realization_id_start, realization_id_end),
+                and it has as many columns as many particles with type ptype
+                can be found, and it has dtype=numpy.float64.
+
+            Modifies the state of the prng instance associated with ptype
+            and advances as many steps as many particles with ptype can
+            be found, regardless the id_filter.
+
+            If _sourcefile is set, reads in 64-bit floats from _sourcefile
+            and does not modify the state of the prng instance."""
+
+        ptype = seed_args[0]
+        purpose = seed_args[1]
+        r_start = seed_args[2][0]
+        r_end = seed_args[2][1]
+
+        amount = len(self._particles[ptype])
+        ret = numpy.ndarray((r_end-r_start, amount), dtype=numpy.float64)
+        exclude_ids = id_filter[0]
+        include_ids = id_filter[1]
+
+        if self._sourcefile is None:
+            for realization_id in range(r_start, r_end):
+                self.init_prngs(realization_id, [ptype], [purpose])
+                ret_col = self._engines[ptype][purpose].normal(
+                    loc=params[0], scale=params[1], size=amount)
+
+                if exclude_ids is not None:
+                    ret_col = self._exclude_ids(ret_col, ptype, exclude_ids)
+                elif include_ids is not None:
+                    ret_col = self._include_ids(ret_col, ptype, include_ids)
+
+                r_id = realization_id - r_start  # starts from 0
+                ret[r_id] = ret_col
+            ret = self._tee(ret)  # copy the random numbers if needed
+        else:
+            ret = numpy.fromfile(
+                self._sourcefile,
+                dtype=numpy.float64,
+                count=amount * (r_end-r_start))
+
         return ret
 
     def _tee(self, arr: numpy.ndarray) -> numpy.ndarray:
