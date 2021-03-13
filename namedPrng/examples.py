@@ -42,8 +42,6 @@ for rid in remove_quarks:
 # dict is ordered, but sets are not
 mpurposes = ["random_walk", "radioactive_decay"]
 
-Mnprng_stu = named_prng.NamedPrng(mparticles, mpurposes)
-
 
 def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
     """Do some stuff with the NamedPrng.
@@ -95,16 +93,24 @@ print("""
 ####    Generating random numbers with the Mersenne Twister    ####
 ###################################################################""")
 Mnprng_gen = named_prng.NamedPrng(
-    mparticles, mpurposes, filenames=("tee.dat", None))
+    mpurposes, mparticles, filenames=("tee.dat", None))
 do_some_stuff(Mnprng_gen)
+del Mnprng_gen
 
 print("""
 ###################################################################
 ###########     Random numbers are read from a file     ###########
 ###################################################################""")
 Mnprng_use = named_prng.NamedPrng(
-    mparticles, mpurposes, filenames=(None, "tee.dat"))
+    mpurposes, mparticles, filenames=(None, "tee.dat"))
 do_some_stuff(Mnprng_use)
+Mnprng_use.export_particles()
+del Mnprng_use
 
 print("All the random numbers in the tee file:")
 print(named_prng.NamedPrng.get_rnds_from_file("tee.dat"))
+
+Mnprng_stu = named_prng.NamedPrng(mpurposes)
+
+print("\nLoad back the particles and generate random numbers for quarks for random_walk.")
+print(Mnprng_stu.random_r(["quarks", "random_walk", (0, 2)]))

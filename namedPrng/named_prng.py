@@ -3,8 +3,9 @@
     named pseudo random number generator. Detailed documentation is available
     in the README.md file too. Check out examples.py for examples!"""
 
+import pickle
 import sys
-from typing import Dict, Iterable, Tuple, List
+from typing import Dict, Iterable, Tuple, List, Union
 import numpy
 
 
@@ -49,44 +50,56 @@ class NamedPrng:
             If set, numbers from this file is read instead of generating them
             with the numpy random generator (e.g. Mersenne Twister). It is
             the user's responsibility to make sure the file has enough random
-            numbers and that these numbers have the required properties.
-
-        Methods
-        -----------
-        _seed_map(self, realization: int, ptype: str) -> int:
-        init_prngs(self, realization_id: int) -> None:
-        random(self, ptype: str, exclude_ids=None) -> numpy.ndarray:
-        _tee(arr: numpy.ndarray) -> numpy.ndarray:
-        _exclude_ids(self, arr: numpy.ndarray, ptype: str, exclude_ids: Iterable) -> None:
-        _include_ids(self, arr: numpy.ndarray, ptype: str, include_ids: Iterable) -> None:
-        random(self,
-               ptype: str,
-               purpose: str,
-               id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
-        normal(self,
-               ptype: str,
-               purpose: str,
-               id_filter: Tuple[Iterable, Iterable] = (None, None),
-               params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
-        @classmethod
-        get_rnds_from_file(cls, teefilename: str) -> numpy.ndarray:
-        """
+            numbers and that these numbers have the required properties."""
 
     N_max = 100  # maximum number of particle type - purpose combinations
     N_ptl = 10   # maximum number of particle types
 
     def __init__(self,
-                 particles: Dict[str, Dict[str, int]],
                  purposes: List[str],
+                 particles: Union[str, Dict[str, Dict[str, int]]
+                                  ] = "dict_of_particles.pickle",
                  realization_id: int = None,
                  filenames: Tuple[str, str] = (None, None)) -> None:
-        """filenames is the tuple of (teefilename, sourcefilename)"""
-        self._particles = particles
-        if len(particles) > self.N_ptl or len(purposes) * self.N_ptl > self.N_max:
-            sys.exit("The NamedPrng is fed with", len(particles),
-                     "number of types, and with", len(purposes),
-                     "number of purposes, while N_ptl =", self.N_ptl,
-                     "and N_max =", self.N_max, ". Program terminates.")
+        """Parameters
+            -----------------
+            purposes: List[str]
+                prng instances are assigned to particle types and purposes, i.e.
+                for a particle types, where you have a dict of particle IDs, you
+                can have multiple prngs associated to it.
+            particles: Union[str, Dict[str, Dict[str, int]]] = "dict_of_particles.pickle"
+                either a filename to unpickle the particles from a previous run
+                or a dictionary of particle types as keys and a dict of
+                particles, where the key is the ID and the value is the order
+                number of the particle.
+            realization_id: int = None
+                If you set it, your prngs will be initialized immediately and
+                you can generate random numbers for a single realization_id.
+                If you generate random numbers in realization_id ranges,
+                this argument is useless.
+            filenames: Tuple[str, str] = (None, None)
+                Tuple of (teefilename, sourcefilename). The random numbers
+                generated are copied to the file called teefilename and if
+                sourcefilename is defined, random numbers will be
+                sequentially read from the file called sourcefilename."""
+
+        if isinstance(particles, str):
+            try:
+                with open(particles, "rb") as ifile:
+                    self._particles = pickle.load(ifile)
+            except OSError as err:
+                message = "Cannot open file " + particles + \
+                    " for unpickling because an OSError occurred: " + str(err)
+                sys.exit(message)
+        else:
+            self._particles = particles
+
+        if len(self._particles) > self.N_ptl or len(purposes) * self.N_ptl > self.N_max:
+            message = "The NamedPrng is fed with " + str(len(self._particles)) + \
+                " number of types, and with " + str(len(purposes)) + \
+                " number of purposes, while N_ptl = " + str(self.N_ptl) + \
+                " and N_max = " + str(self.N_max) + ". Program terminates."
+            sys.exit(message)
 
         self._purposes = purposes
 
@@ -181,14 +194,12 @@ class NamedPrng:
                ptype: str,
                purpose: str,
                id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
-        """If _sourcefile is not set,
-            returns a 1D array of random numbers
-            with a uniform distribution on[0, 1)
-            for each particle with type ptype for the specified purpose
-            that matches the filter criterion id_filter.
-            The prngs must be initialized before this call by
-            providing the realization_id at initialization time
-            or by calling :func:`init_prngs`.
+        """If _sourcefile is not set, returns a 1D array of random numbers with
+            a uniform distribution on[0, 1) for each particle with type ptype
+            for the specified purpose that matches the filter criterion
+            id_filter. The prngs must be initialized before this call by
+            providing the realization_id at initialization time or by calling
+            :func:`init_prngs`.
 
             id_filter is a tuple of (exclude_ids, include_ids).
 
@@ -228,13 +239,11 @@ class NamedPrng:
     def random_r(self,
                  seed_args: Tuple[str, str, Tuple[int, int]],
                  id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
-        """If _sourcefile is not set,
-            returns a 2D array of random numbers with a
-            uniform distribution on[0, 1) for all realization ID and
-            for each particle with type ptype for the specified purpose
-            that matches the filter criterion id_filter.
-            Automatically initialize the prngs.
-            The behavior is identical to calling :func`init_prngs` and
+        """If _sourcefile is not set, returns a 2D array of random numbers with
+            auniform distribution on[0, 1) for all realization ID and for each
+            particle with type ptype for the specified purpose that matches the
+            filter criterion id_filter. Automatically initialize the prngs. The
+            behavior is identical to calling :func`init_prngs` and
             :func:`random` with the proper realization_id parameters.
 
             Parameters
@@ -309,14 +318,11 @@ class NamedPrng:
                id_filter: Tuple[Iterable, Iterable] = (None, None),
                params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
         """If _sourcefile is not set,
-            returns a 1D array of random numbers
-            with a normal (aka Gaussian) distribution
-            with the properties passed,
-            for each of the particles with type ptype
-            and for the specified purpose
-            that matches the filter criterion id_filter.
-            The prngs must be initialized before this call by
-            providing the realization_id at initialization time
+            returns a 1D array of random numbers with a normal (aka Gaussian)
+            distribution with the properties passed, for each of the particles
+            with type ptype and for the specified purpose that matches the
+            filter criterion id_filter. The prngs must be initialized before
+            this call by providing the realization_id at initialization time
             or by calling :func:`init_prngs`.
 
             Parameters
@@ -344,7 +350,14 @@ class NamedPrng:
                 i.e. the loc and scale paramters defining the
                 mean and the standard deviation.
 
-
+            Returns
+            -----------------------
+            numpy.ndarray:
+                shape(number of realizations, number of particles)
+                It has as many rows as many realization_id are in the range of
+                [realization_id_start, realization_id_end),
+                and it has as many columns as many particles with type ptype
+                can be found, and it has dtype=numpy.float64.
 
             Modifies the state of the prng instance associated with ptype
             and advances as many steps as many particles with ptype can
@@ -376,14 +389,13 @@ class NamedPrng:
                  seed_args: Tuple[str, str, Tuple[int, int]],
                  id_filter: Tuple[Iterable, Iterable] = (None, None),
                  params: Tuple[float, float] = (0, 1)) -> numpy.ndarray:
-        """If _sourcefile is not set,
-            returns a 2D array of random numbers with a
-            normal (aka Gaussian) distribution with the properties passed,
+        """If _sourcefile is not set, returns a 2D array of random numbers with
+            a normal (aka Gaussian) distribution with the properties passed,
             for all realization ID and for each particle with type ptype for
             the specified purpose that matches the filter criterion id_filter.
-            Automatically initialize the prngs.
-            The behavior is identical to calling :func`init_prngs` and
-            :func:`normal` with the proper realization_id parameters.
+            Automatically initialize the prngs. The behavior is identical to
+            calling :func`init_prngs` and :func:`normal` with the proper
+            realization_id parameters.
 
             Parameters
             -----------------------
@@ -461,6 +473,18 @@ class NamedPrng:
         if self._teefile is not None:
             arr.tofile(self._teefile)
         return arr
+
+    def export_particles(self, filename: str = "dict_of_particles.pickle") -> None:
+        """Exports the attribute _particles containing the particles, including
+        the particle types, and particle ID and their order number. Uses pickle
+        to save the dictionary."""
+
+        try:
+            with open(filename, "wb") as ofile:
+                pickle.dump(self._particles, ofile, 4)
+        except OSError as err:
+            print("Cannot export particles to", filename,
+                  "because an OSError occurred:", err)
 
     @classmethod
     def get_rnds_from_file(cls, teefilename: str) -> numpy.ndarray:
