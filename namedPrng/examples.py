@@ -9,7 +9,9 @@
       for different purposes
     - the random numbers can be read back in the same order"""
 
+import os
 import named_prng
+
 
 # quarks is a particle type with 6 different IDs as keys
 # The order number will be important once we remove IDs.
@@ -114,3 +116,5 @@ Mnprng_stu = named_prng.NamedPrng(mpurposes)
 
 print("\nLoad back the particles and generate random numbers for quarks for random_walk.")
 print(Mnprng_stu.random_r(["quarks", "random_walk", (0, 2)]))
+
+os.remove("dict_of_particles.pickle")

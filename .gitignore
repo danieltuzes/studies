@@ -290,3 +290,6 @@ TSWLatexianTemp*
 !random.pdf
 !random.pptx
 !random.html
+
+# program outputs
+tee.dat
