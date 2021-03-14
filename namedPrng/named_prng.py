@@ -67,7 +67,8 @@ class NamedPrng:
                 prng instances are assigned to particle types and purposes, i.e.
                 for a particle types, where you have a dict of particle IDs, you
                 can have multiple prngs associated to it.
-            particles: Union[str, Dict[str, Dict[str, int]]] = "dict_of_particles.pickle"
+            particles: Union[str, Dict[str, Dict[str, int]]
+                ] = "dict_of_particles.pickle"
                 either a filename to unpickle the particles from a previous run
                 or a dictionary of particle types as keys and a dict of
                 particles, where the key is the ID and the value is the order
@@ -240,10 +241,10 @@ class NamedPrng:
                  seed_args: Tuple[str, str, Tuple[int, int]],
                  id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
         """If _sourcefile is not set, returns a 2D array of random numbers with
-            auniform distribution on[0, 1) for all realization ID and for each
+            a uniform distribution on[0, 1) for all realization ID and for each
             particle with type ptype for the specified purpose that matches the
             filter criterion id_filter. Automatically initialize the prngs. The
-            behavior is identical to calling :func`init_prngs` and
+            behavior is identical to calling :func:`init_prngs` and
             :func:`random` with the proper realization_id parameters.
 
             Parameters
@@ -286,15 +287,38 @@ class NamedPrng:
         r_start = seed_args[2][0]
         r_end = seed_args[2][1]
 
-        amount = len(self._particles[ptype])
-        ret = numpy.ndarray((r_end-r_start, amount), dtype=numpy.float64)
         exclude_ids = id_filter[0]
         include_ids = id_filter[1]
+
+        tot_amount = len(self._particles[ptype])
+        sbs_amount = tot_amount  # the amount for the subset
+        if id_filter[1] is not None:
+            sbs_amount = len(id_filter[1])
+        elif id_filter[0] is not None:
+            sbs_amount -= len(id_filter[0])
+
+        ret = numpy.ndarray((r_end-r_start, sbs_amount), dtype=numpy.float64)
 
         if self._sourcefile is None:
             for realization_id in range(r_start, r_end):
                 self.init_prngs(realization_id, [ptype], [purpose])
-                ret_col = self._engines[ptype][purpose].random(amount)
+                ret_col = self._engines[ptype][purpose].random(tot_amount)
+
+                # copy the random numbers if needed
+                ret_col = self._tee(ret_col)
+                if exclude_ids is not None:
+                    ret_col = self._exclude_ids(ret_col, ptype, exclude_ids)
+                elif include_ids is not None:
+                    ret_col = self._include_ids(ret_col, ptype, include_ids)
+
+                r_id = realization_id - r_start  # starts from 0
+                ret[r_id] = ret_col
+        else:
+            for realization_id in range(r_start, r_end):
+                ret_col = numpy.fromfile(
+                    self._sourcefile,
+                    dtype=numpy.float64,
+                    count=tot_amount)
 
                 if exclude_ids is not None:
                     ret_col = self._exclude_ids(ret_col, ptype, exclude_ids)
@@ -303,12 +327,6 @@ class NamedPrng:
 
                 r_id = realization_id - r_start  # starts from 0
                 ret[r_id] = ret_col
-            ret = self._tee(ret)  # copy the random numbers if needed
-        else:
-            ret = numpy.fromfile(
-                self._sourcefile,
-                dtype=numpy.float64,
-                count=amount * (r_end-r_start))
 
         return ret
 
@@ -394,7 +412,7 @@ class NamedPrng:
             for all realization ID and for each particle with type ptype for
             the specified purpose that matches the filter criterion id_filter.
             Automatically initialize the prngs. The behavior is identical to
-            calling :func`init_prngs` and :func:`normal` with the proper
+            calling :func:`init_prngs` and :func:`normal` with the proper
             realization_id parameters.
 
             Parameters
@@ -441,30 +459,44 @@ class NamedPrng:
         r_start = seed_args[2][0]
         r_end = seed_args[2][1]
 
-        amount = len(self._particles[ptype])
-        ret = numpy.ndarray((r_end-r_start, amount), dtype=numpy.float64)
-        exclude_ids = id_filter[0]
-        include_ids = id_filter[1]
+        tot_amount = len(self._particles[ptype])
+        sbs_amount = tot_amount  # the amount for the subset
+        if id_filter[1] is not None:
+            sbs_amount = len(id_filter[1])
+        elif id_filter[0] is not None:
+            sbs_amount -= len(id_filter[0])
+
+        ret = numpy.ndarray((r_end-r_start, sbs_amount), dtype=numpy.float64)
 
         if self._sourcefile is None:
             for realization_id in range(r_start, r_end):
                 self.init_prngs(realization_id, [ptype], [purpose])
                 ret_col = self._engines[ptype][purpose].normal(
-                    loc=params[0], scale=params[1], size=amount)
+                    loc=params[0], scale=params[1], size=tot_amount)
 
-                if exclude_ids is not None:
-                    ret_col = self._exclude_ids(ret_col, ptype, exclude_ids)
-                elif include_ids is not None:
-                    ret_col = self._include_ids(ret_col, ptype, include_ids)
+                # copy the random numbers if needed
+                ret_col = self._tee(ret_col)
+                if id_filter[0] is not None:
+                    ret_col = self._exclude_ids(ret_col, ptype, id_filter[0])
+                elif id_filter[1] is not None:
+                    ret_col = self._include_ids(ret_col, ptype, id_filter[1])
 
                 r_id = realization_id - r_start  # starts from 0
                 ret[r_id] = ret_col
-            ret = self._tee(ret)  # copy the random numbers if needed
         else:
-            ret = numpy.fromfile(
-                self._sourcefile,
-                dtype=numpy.float64,
-                count=amount * (r_end-r_start))
+            for realization_id in range(r_start, r_end):
+                ret_col = numpy.fromfile(
+                    self._sourcefile,
+                    dtype=numpy.float64,
+                    count=tot_amount)
+
+                if id_filter[0] is not None:
+                    ret_col = self._exclude_ids(ret_col, ptype, id_filter[0])
+                elif id_filter[1] is not None:
+                    ret_col = self._include_ids(ret_col, ptype, id_filter[1])
+
+                r_id = realization_id - r_start  # starts from 0
+                ret[r_id] = ret_col
 
         return ret
 
