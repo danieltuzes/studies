@@ -287,9 +287,6 @@ class NamedPrng:
         r_start = seed_args[2][0]
         r_end = seed_args[2][1]
 
-        exclude_ids = id_filter[0]
-        include_ids = id_filter[1]
-
         tot_amount = len(self._particles[ptype])
         sbs_amount = tot_amount  # the amount for the subset
         if id_filter[1] is not None:
@@ -299,34 +296,11 @@ class NamedPrng:
 
         ret = numpy.ndarray((r_end-r_start, sbs_amount), dtype=numpy.float64)
 
-        if self._sourcefile is None:
-            for realization_id in range(r_start, r_end):
-                self.init_prngs(realization_id, [ptype], [purpose])
-                ret_col = self._engines[ptype][purpose].random(tot_amount)
-
-                # copy the random numbers if needed
-                ret_col = self._tee(ret_col)
-                if exclude_ids is not None:
-                    ret_col = self._exclude_ids(ret_col, ptype, exclude_ids)
-                elif include_ids is not None:
-                    ret_col = self._include_ids(ret_col, ptype, include_ids)
-
-                r_id = realization_id - r_start  # starts from 0
-                ret[r_id] = ret_col
-        else:
-            for realization_id in range(r_start, r_end):
-                ret_col = numpy.fromfile(
-                    self._sourcefile,
-                    dtype=numpy.float64,
-                    count=tot_amount)
-
-                if exclude_ids is not None:
-                    ret_col = self._exclude_ids(ret_col, ptype, exclude_ids)
-                elif include_ids is not None:
-                    ret_col = self._include_ids(ret_col, ptype, include_ids)
-
-                r_id = realization_id - r_start  # starts from 0
-                ret[r_id] = ret_col
+        for realization_id in range(r_start, r_end):
+            self.init_prngs(realization_id, [ptype], [purpose])
+            ret_col = self.random(ptype, purpose, id_filter)
+            r_id = realization_id - r_start  # starts from 0
+            ret[r_id] = ret_col
 
         return ret
 
@@ -453,7 +427,6 @@ class NamedPrng:
 
             If _sourcefile is set, reads in 64-bit floats from _sourcefile
             and does not modify the state of the prng instance."""
-
         ptype = seed_args[0]
         purpose = seed_args[1]
         r_start = seed_args[2][0]
@@ -468,35 +441,100 @@ class NamedPrng:
 
         ret = numpy.ndarray((r_end-r_start, sbs_amount), dtype=numpy.float64)
 
-        if self._sourcefile is None:
-            for realization_id in range(r_start, r_end):
-                self.init_prngs(realization_id, [ptype], [purpose])
-                ret_col = self._engines[ptype][purpose].normal(
-                    loc=params[0], scale=params[1], size=tot_amount)
+        for realization_id in range(r_start, r_end):
+            self.init_prngs(realization_id, [ptype], [purpose])
+            ret_col = self.normal(ptype, purpose, id_filter, params)
+            r_id = realization_id - r_start  # starts from 0
+            ret[r_id] = ret_col
 
-                # copy the random numbers if needed
-                ret_col = self._tee(ret_col)
-                if id_filter[0] is not None:
-                    ret_col = self._exclude_ids(ret_col, ptype, id_filter[0])
-                elif id_filter[1] is not None:
-                    ret_col = self._include_ids(ret_col, ptype, id_filter[1])
+        return ret
 
-                r_id = realization_id - r_start  # starts from 0
-                ret[r_id] = ret_col
-        else:
-            for realization_id in range(r_start, r_end):
-                ret_col = numpy.fromfile(
-                    self._sourcefile,
-                    dtype=numpy.float64,
-                    count=tot_amount)
+    def generate_r(self,
+                   rnd_type: Union[str, Tuple[str, Tuple[float, float]]],
+                   seed_args: Tuple[str, str, Tuple[int, int]],
+                   id_filter: Tuple[Iterable, Iterable] = (None, None)) -> numpy.ndarray:
+        """If _sourcefile is not set, returns a 2D array of random numbers with
+            a type rnd_type and with the properties passed,
+            for all realization ID and for each particle with type ptype for
+            the specified purpose that matches the filter criterion id_filter.
+            Automatically initialize the prngs. The behavior is identical to
+            calling :func:`init_prngs` and :func:`normal` with the proper
+            realization_id parameters.
 
-                if id_filter[0] is not None:
-                    ret_col = self._exclude_ids(ret_col, ptype, id_filter[0])
-                elif id_filter[1] is not None:
-                    ret_col = self._include_ids(ret_col, ptype, id_filter[1])
+            Parameters
+            -----------------------
+            rnd_type: Union[str, Tuple[str, Tuple[float, float]]]
+                "random" | "normal" | ("normal",(loc,scale))
 
-                r_id = realization_id - r_start  # starts from 0
-                ret[r_id] = ret_col
+                - which be a string "random", which defines the uniform
+                  distribution on [0,1)
+                - or a string "random", which defines a normal distribution
+                  with a mean 0 and std 1
+                - or a tuple of "random", (mean,std), e.g.
+                  ("random",(1,3)) for a mean=1 and std=3.
+
+            seed_args: Tuple(str, str, Tuple(int,int)):
+                (ptype, purpose, (realization_id_start, realization_id_end))
+                Values that affect the seeds.
+                The range [realization_id_start, realization_id_end)
+                will be used to generate the 2D array of random numbers.
+
+            id_filter: Tuple[Iterable, Iterable] = (None, None)
+                (exclude_ids, include_ids)
+
+                - exclude_ids tells the IDs for which particles the random
+                numbers should be omitted from the return value. The order
+                number of the random numbers are read from the value of the
+                correcponding ID key of the particles.
+                - include_ids tells which particles IDs should be used for the
+                random number generation. Effective only if exclude_ids is None.
+
+            params: Tuple[float,float] = (0,1)
+                The parameters passed to numpy's normal function,
+                i.e. the loc and scale paramters defining the
+                mean and the standard deviation.
+
+            Returns
+            -----------------------
+            numpy.ndarray:
+                shape(number of realizations, number of particles)
+                It has as many rows as many realization_id are in the range of
+                [realization_id_start, realization_id_end),
+                and it has as many columns as many particles with type ptype
+                can be found, and it has dtype=numpy.float64.
+
+            Modifies the state of the prng instance associated with ptype
+            and advances as many steps as many particles with ptype can
+            be found, regardless the id_filter.
+
+            If _sourcefile is set, reads in 64-bit floats from _sourcefile
+            and does not modify the state of the prng instance."""
+        ptype = seed_args[0]
+        purpose = seed_args[1]
+        r_start = seed_args[2][0]
+        r_end = seed_args[2][1]
+
+        tot_amount = len(self._particles[ptype])
+        sbs_amount = tot_amount  # the amount for the subset
+        if id_filter[1] is not None:
+            sbs_amount = len(id_filter[1])
+        elif id_filter[0] is not None:
+            sbs_amount -= len(id_filter[0])
+
+        ret = numpy.ndarray((r_end-r_start, sbs_amount), dtype=numpy.float64)
+
+        for realization_id in range(r_start, r_end):
+            self.init_prngs(realization_id, [ptype], [purpose])
+            if isinstance(rnd_type, str) and rnd_type == "random":
+                ret_col = self.random(ptype, purpose, id_filter)
+            elif isinstance(rnd_type, str) and rnd_type == "normal":
+                ret_col = self.normal(ptype, purpose, id_filter)
+            elif isinstance(rnd_type, tuple) and rnd_type[0] == "normal":
+                ret_col = self.normal(ptype, purpose, id_filter, rnd_type[1])
+            else:
+                sys.exit("Unsupported rnd_type " + str(rnd_type))
+            r_id = realization_id - r_start  # starts from 0
+            ret[r_id] = ret_col
 
         return ret
 
