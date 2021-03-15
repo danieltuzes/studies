@@ -90,7 +90,8 @@ class NamedPrng:
                     self._particles = pickle.load(ifile)
             except OSError as err:
                 message = "Cannot open file " + particles + \
-                    " for unpickling because an OSError occurred: " + str(err)
+                    " for unpickling to load particles, " + \
+                    "because an OSError occurred: " + str(err)
                 sys.exit(message)
         else:
             self._particles = particles
@@ -186,10 +187,10 @@ class NamedPrng:
             Random numbers have been already generated,
             and memory is allocated for them once already. Although you may
             exclude them, they affected the state of the prng instance!"""
-        keep_or_del = numpy.ones(arr.size, dtype=bool)
-        for mid in include_ids:
-            keep_or_del[self._particles[ptype][mid]] = False
-        return numpy.delete(arr, keep_or_del)
+        keep_indices = numpy.ndarray(len(include_ids), dtype=numpy.uint32)
+        for index, mid in enumerate(include_ids):
+            keep_indices[index] = self._particles[ptype][mid]
+        return arr[keep_indices]
 
     def random(self,
                ptype: str,
