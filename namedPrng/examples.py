@@ -10,7 +10,7 @@
     - the random numbers can be read back in the same order"""
 
 import os
-import named_prng
+from named_prng import NamedPrng, FStrat, Distr
 
 
 # quarks is a particle type with 6 different IDs as keys
@@ -45,7 +45,7 @@ for rid in remove_quarks:
 mpurposes = ["random_walk", "radioactive_decay"]
 
 
-def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
+def do_some_stuff(mnprng: NamedPrng) -> None:
     """Do some stuff with the NamedPrng.
         I will call it without and with _sourcefile defined to see
         if it gives the same result."""
@@ -55,7 +55,7 @@ def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
 
             # generate random numbers for quarks
             mnprng.init_prngs(realization_id)
-            random_for_quarks = mnprng.random("quarks", purpose)
+            random_for_quarks = mnprng.generate(Distr.UNI, "quarks", purpose)
 
             for (key, value), rnd in zip(quarks.items(), random_for_quarks):
                 print(key, value, rnd, sep="\t")
@@ -66,8 +66,10 @@ def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
 
             mnprng.init_prngs(realization_id)    # reset the prngs
 
-            random_for_quarks_subset = mnprng.random(
-                "quarks", purpose, id_filter=(remove_quarks, None))
+            random_for_quarks_subset = mnprng.generate(Distr.UNI,
+                                                       "quarks",
+                                                       purpose,
+                                                       id_filter=(remove_quarks, FStrat.EXC))
 
             for (key, value), rnd in zip(quarks_subset.items(), random_for_quarks_subset):
                 print(key, value, rnd, sep="\t")
@@ -78,8 +80,10 @@ def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
 
             mnprng.init_prngs(realization_id)    # reset the prngs
 
-            random_for_quarks_subset_in = mnprng.random(
-                "quarks", purpose, id_filter=(None, quarks_subset))
+            random_for_quarks_subset_in = mnprng.generate(Distr.UNI,
+                                                          "quarks",
+                                                          purpose,
+                                                          id_filter=(quarks_subset, FStrat.INC))
 
             for (key, value), rnd in zip(quarks_subset.items(), random_for_quarks_subset_in):
                 print(key, value, rnd, sep="\t")
@@ -87,15 +91,15 @@ def do_some_stuff(mnprng: named_prng.NamedPrng) -> None:
                 "========================================================================")
 
     print('--  now for all realizations in 1 go for the purpose "random_walk"  --')
-    print(mnprng.random_r(["quarks", "random_walk", (0, 2)]))
+    print(mnprng.generate_r(Distr.UNI, ["quarks", "random_walk", (0, 2)]))
 
 
 print("""
 ###################################################################
 ####    Generating random numbers with the Mersenne Twister    ####
 ###################################################################""")
-Mnprng_gen = named_prng.NamedPrng(
-    mpurposes, mparticles, filenames=("tee.dat", None))
+Mnprng_gen = NamedPrng(
+    mpurposes, mparticles, exc_settings=("tee.dat", "", True))
 do_some_stuff(Mnprng_gen)
 del Mnprng_gen
 
@@ -103,18 +107,18 @@ print("""
 ###################################################################
 ###########     Random numbers are read from a file     ###########
 ###################################################################""")
-Mnprng_use = named_prng.NamedPrng(
-    mpurposes, mparticles, filenames=(None, "tee.dat"))
+Mnprng_use = NamedPrng(
+    mpurposes, mparticles, exc_settings=("", "tee.dat", True))
 do_some_stuff(Mnprng_use)
 Mnprng_use.export_particles()
 del Mnprng_use
 
 print("All the random numbers in the tee file:")
-print(named_prng.NamedPrng.get_rnds_from_file("tee.dat"))
+print(NamedPrng.get_rnds_from_file("tee.dat"))
 
-Mnprng_stu = named_prng.NamedPrng(mpurposes)
+Mnprng_stu = NamedPrng(mpurposes)
 
 print("\nLoad back the particles and generate random numbers for quarks for random_walk.")
-print(Mnprng_stu.random_r(["quarks", "random_walk", (0, 2)]))
+print(Mnprng_stu.generate_r(Distr.UNI, ["quarks", "random_walk", (0, 2)]))
 
 os.remove("dict_of_particles.pickle")
