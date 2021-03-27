@@ -455,7 +455,7 @@ class NamedPrng:
             print("Cannot export particles to", filename,
                   "because an OSError occurred:", err)
 
-    @ classmethod
+    @classmethod
     def get_rnds_from_file(cls, teefilename: str) -> numpy.ndarray:
         """Returns 64-bit float values from a file
         where random numbers are supposed to be stored."""
