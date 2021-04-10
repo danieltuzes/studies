@@ -1,5 +1,5 @@
 """test_named_prng.py
-    Tests the named_prng.py with pytest."""
+Tests the named_prng.py with pytest."""
 
 import os
 import filecmp
@@ -22,8 +22,11 @@ mpurposes = ["random_walk", "fusion", "fission"]
 
 
 def test_uniform() -> None:
-    """Tests the class if it generates the same sequence of random numbers
-        as it generated in a controlled environment long time ago."""
+    """Tests if uniform distribution is the same as before.
+
+    Tests the class if it generates the same sequence of random numbers
+    as it generated in a controlled environment long time ago.
+    """
 
     mnprng_gen = NamedPrng(mpurposes, mparticles)
     mnprng_gen.init_prngs(0, ["quarks"], ["random_walk"])
@@ -36,9 +39,12 @@ def test_uniform() -> None:
 
 
 def test_normal() -> None:
-    """Tests the first few random numbers from the seed 0
-        if matches a previously generated sequence for normal distribution
-        with 3 different mean and std."""
+    """Tests if normal distribution is the same as before.
+
+    Tests the first few random numbers from the seed 0
+    if matches a previously generated sequence for normal distribution
+    with 3 different mean and std.
+    """
 
     param_pairs = [(mean, std)
                    for mean in [-1, 0, 1] for std in [0.1, 1, 10]]
@@ -72,10 +78,14 @@ def test_normal() -> None:
 
 
 def test_diff_or_identical_cases() -> None:
-    """Tests if for different realization_id and for different
-        purpose you get different random numbers,
-        but for the same realization_id and same purpose
-        you get the same random numbers."""
+    """Tests if same or diff. numbers are generated for same or diff. cases.
+
+    Tests if for different realization_id and for different
+    purpose you get different random numbers,
+    but for the same realization_id and same purpose
+    you get the same random numbers.
+    """
+
     realization_ids = [1, 2]
     for mparticle in mparticles:  # pylint: disable= too-many-nested-blocks
         for realization_id1 in realization_ids:
@@ -100,18 +110,22 @@ def test_diff_or_identical_cases() -> None:
 
 
 def test_subset_exc_inc() -> None:
-    """Tests if for a subset of particles you get the proper subset of random
-        numbers and whether you get the same random numbers by exclusion and
-        inclusion if the class is initialized for a realization_id range."""
+    """Tests exclusion and inclusion filtering.
+
+    Tests if for a subset of particles you get the proper subset of random
+    numbers and whether you get the same random numbers by exclusion and
+    inclusion if the class is initialized for a realization_id range.
+    """
+
     mnprng_gen_full = NamedPrng(mpurposes, mparticles)
     mnprng_gen_sbs1 = NamedPrng(mpurposes, mparticles)
     mnprng_gen_sbs2 = NamedPrng(mpurposes, mparticles)
-    seed_args = ("quarks", "random_walk", (0, 2))
-    arr_full = mnprng_gen_full.generate_r(Distr.UNI, seed_args)
+    seed_args = ("quarks", "random_walk", range(0, 2))
+    arr_full = mnprng_gen_full.generate_it(Distr.UNI, seed_args)
 
-    arr_sbs1 = mnprng_gen_sbs1.generate_r(
+    arr_sbs1 = mnprng_gen_sbs1.generate_it(
         Distr.UNI, seed_args, (remove_quarks, FStrat.EXC))
-    arr_sbs2 = mnprng_gen_sbs2.generate_r(
+    arr_sbs2 = mnprng_gen_sbs2.generate_it(
         Distr.UNI, seed_args, (quarks_subset, FStrat.INC))
 
     # exclusion and inclusion is the same if the resulting set is the same
@@ -127,9 +141,13 @@ def test_subset_exc_inc() -> None:
 
 
 def test_same_case_after_pickle() -> None:
-    """Exports particles and loads back, and tests if the generated
-        random numbers for a subset is the same, for one
-        realization_id for uniform and for a range for gaussian."""
+    """Tests if pickle works as expected.
+
+    Exports particles and loads back, and tests if the generated
+    random numbers for a subset is the same, for one
+    realization_id for uniform and for a range for gaussian.
+    """
+
     mnprng_save = NamedPrng(mpurposes, mparticles, realization_id=0)
     arr_save = mnprng_save.generate(Distr.UNI,
                                     "quarks", mpurposes[0],
@@ -151,9 +169,12 @@ def test_same_case_after_pickle() -> None:
         os.remove(mparticles_fname)
 
     mnprng_save = NamedPrng(mpurposes, mparticles, realization_id=0)
-    arr_save = mnprng_save.generate_r(
+
+    seed_args = ["quarks", mpurposes[0], range(0, 2)]
+
+    arr_save = mnprng_save.generate_it(
         (Distr.STN, (1, 3)),
-        ["quarks", mpurposes[0], (0, 2)],
+        seed_args,
         (None, remove_quarks))
     mparticles_fname = "test_same_case_after_pickle_normal"
     mnprng_save.export_particles(mparticles_fname)
@@ -161,9 +182,9 @@ def test_same_case_after_pickle() -> None:
 
     mnprng_load = NamedPrng(
         mpurposes, mparticles_fname, realization_id=0)
-    arr_load = mnprng_load.generate_r(
+    arr_load = mnprng_load.generate_it(
         (Distr.STN, (1, 3)),
-        ["quarks", mpurposes[0], (0, 2)],
+        seed_args,
         (None, remove_quarks))
 
     assert arr_save == approx(arr_load)
@@ -173,11 +194,15 @@ def test_same_case_after_pickle() -> None:
 
 
 def test_teefile() -> None:
-    """Create a set of random numbers then reads back from the teefile and
-        checks if it the same for a realization_id range using filters
-        including or excluding.
-        While reading back, copies the random numbers to another teefile
-        and checks if the copied file is the same."""
+    """Checks if teeing and reading back works.
+
+    Create a set of random numbers then reads back from the teefile and
+    checks if it the same for a realization_id range using filters
+    including or excluding.
+    While reading back, copies the random numbers to another teefile
+    and checks if the copied file is the same.
+    """
+
     for only_used in [False, True]:
         for strategy in [FStrat.INC, FStrat.EXC]:
             tee_fname = "teefile_test_named_prng.dat"
@@ -188,28 +213,28 @@ def test_teefile() -> None:
                 os.remove("B" + tee_fname)
 
             mnprng_save = NamedPrng(mpurposes, mparticles,
-                                    exc_settings=(tee_fname, "", only_used))
-
-            arr_save_r = mnprng_save.generate_r(
+                                    exim_settings=(tee_fname, "", only_used))
+            seed_args = ["quarks", mpurposes[0], range(0, 2)]
+            arr_save_r = mnprng_save.generate_it(
                 Distr.UNI,
-                ["quarks", "random_walk", (0, 2)],
+                seed_args,
                 id_filter=(remove_quarks, strategy))
-            arr_save_n = mnprng_save.generate_r(
+            arr_save_n = mnprng_save.generate_it(
                 (Distr.STN, (1, 3)),
-                ["quarks", "random_walk", (0, 2)],
+                seed_args,
                 id_filter=(remove_quarks, strategy))
             del mnprng_save
 
             mnprng_load = NamedPrng(mpurposes, mparticles,
-                                    exc_settings=("B"+tee_fname, tee_fname, only_used))
+                                    exim_settings=("B"+tee_fname, tee_fname, only_used))
 
-            arr_load_r = mnprng_load.generate_r(
+            arr_load_r = mnprng_load.generate_it(
                 Distr.UNI,
-                ["quarks", "random_walk", (0, 2)],
+                seed_args,
                 id_filter=(remove_quarks, strategy))
-            arr_load_n = mnprng_load.generate_r(
+            arr_load_n = mnprng_load.generate_it(
                 (Distr.STN, (1, 3)),
-                ["quarks", "random_walk", (0, 2)],
+                seed_args,
                 id_filter=(remove_quarks, strategy))
 
             assert arr_load_r == approx(arr_save_r)
@@ -221,3 +246,40 @@ def test_teefile() -> None:
                 os.remove(tee_fname)
             if os.path.isfile("B"+tee_fname):
                 os.remove("B" + tee_fname)
+
+
+def test_generate_it_it() -> None:
+    """Tests the iterable feature of the generate_it function.
+
+    Generates random numbers for the IDs 0, 2, 4, 7, 8, 9 using 3 ways:
+
+    - 1 by 1 by initializing and generating realization-wise and then joining,
+    - by a list containing the values
+    - by joining range(0,6,2) and range(7,10).
+    """
+
+    ids = [0, 2, 4, 7, 8, 9]
+
+    mnprng1by1 = NamedPrng(mpurposes, mparticles)
+    mnprnglist = NamedPrng(mpurposes, mparticles)
+    mnprngrang = NamedPrng(mpurposes, mparticles)
+
+    p_type = "quarks"
+    purpose = mpurposes[0]  # random_walk
+
+    ret1by1 = numpy.ndarray(shape=(len(p_type), len(ids)), dtype=numpy.float64)
+    retrang = numpy.ndarray(shape=(len(p_type), len(ids)), dtype=numpy.float64)
+
+    for count, realization_id in enumerate(ids):
+        mnprng1by1.init_prngs(realization_id)
+        ret_col = mnprng1by1.generate(Distr.STN, p_type, purpose)
+        ret1by1[count] = ret_col
+
+    retlist = mnprnglist.generate_it(Distr.STN, (p_type, purpose, ids))
+    retrang[0:3] = mnprngrang.generate_it(
+        Distr.STN, (p_type, purpose, range(0, 6, 2)))
+    retrang[3:6] = mnprngrang.generate_it(
+        Distr.STN, (p_type, purpose, range(7, 10)))
+
+    numpy.testing.assert_array_equal(ret1by1, retlist)
+    numpy.testing.assert_array_equal(retrang, retlist)

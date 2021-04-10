@@ -1,16 +1,19 @@
 """examples.py
-    Here we call named_prng and test it with some cases. This file proves:
+Here we call named_prng and test it with some cases. This file proves:
 
-    - random numbers can be generated
-      for a given particle set (aka particle type)
-    - the random numbers generated can be restricted by either
-      excluding some particles, or only by allowing a set of them
-    - for the same particle type, random numbers can be generated
-      for different purposes
-    - the random numbers can be read back in the same order"""
+- random numbers can be generated
+    for a given particle set (aka particle type)
+- the random numbers generated can be restricted by either
+    excluding some particles, or only by allowing a set of them
+- for the same particle type, random numbers can be generated
+    for different purposes
+- the random numbers can be read back in the same order
+
+For a more detailed test, check the ``test_named_prng.py``.
+"""
 
 import os
-from named_prng import NamedPrng, FStrat, Distr
+from named_prng import NamedPrng, FStrat, Distr, get_rnds_from_file
 
 
 # quarks is a particle type with 6 different IDs as keys
@@ -47,8 +50,11 @@ mpurposes = ["random_walk", "radioactive_decay"]
 
 def do_some_stuff(mnprng: NamedPrng) -> None:
     """Do some stuff with the NamedPrng.
-        I will call it without and with _sourcefile defined to see
-        if it gives the same result."""
+
+    I will call it without and with _sourcefile defined to see
+    if it gives the same result.
+    """
+
     for realization_id in range(2):
         for purpose in mpurposes:
             print("realization_id =", realization_id, "purpose =", purpose)
@@ -99,7 +105,7 @@ print("""
 ####    Generating random numbers with the Mersenne Twister    ####
 ###################################################################""")
 Mnprng_gen = NamedPrng(
-    mpurposes, mparticles, exc_settings=("tee.dat", "", True))
+    mpurposes, mparticles, exim_settings=("tee.dat", "", True))
 do_some_stuff(Mnprng_gen)
 del Mnprng_gen
 
@@ -108,17 +114,17 @@ print("""
 ###########     Random numbers are read from a file     ###########
 ###################################################################""")
 Mnprng_use = NamedPrng(
-    mpurposes, mparticles, exc_settings=("", "tee.dat", True))
+    mpurposes, mparticles, exim_settings=("", "tee.dat", True))
 do_some_stuff(Mnprng_use)
 Mnprng_use.export_particles()
 del Mnprng_use
 
 print("All the random numbers in the tee file:")
-print(NamedPrng.get_rnds_from_file("tee.dat"))
+print(get_rnds_from_file("tee.dat"))
 
 Mnprng_stu = NamedPrng(mpurposes)
 
 print("\nLoad back the particles and generate random numbers for quarks for random_walk.")
-print(Mnprng_stu.generate_r(Distr.UNI, ["quarks", "random_walk", (0, 2)]))
+print(Mnprng_stu.generate_rl(Distr.UNI, ["quarks", "random_walk", (0, 2)]))
 
 os.remove("dict_of_particles.pickle")
