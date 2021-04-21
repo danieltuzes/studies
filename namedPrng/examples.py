@@ -13,7 +13,7 @@ For a more detailed test, check the ``test_named_prng.py``.
 """
 
 import os
-from named_prng import NamedPrng, FStrat, Distr, get_rnds_from_file
+from namedPrng.named_prng import NamedPrng, FStrat, Distr
 
 
 # quarks is a particle type with 6 different IDs as keys
@@ -97,7 +97,7 @@ def do_some_stuff(mnprng: NamedPrng) -> None:
                 "========================================================================")
 
     print('--  now for all realizations in 1 go for the purpose "random_walk"  --')
-    print(mnprng.generate_r(Distr.UNI, ["quarks", "random_walk", (0, 2)]))
+    print(mnprng.generate_it(Distr.UNI, ["quarks", "random_walk", (0, 1, 2)]))
 
 
 print("""
@@ -119,12 +119,9 @@ do_some_stuff(Mnprng_use)
 Mnprng_use.export_particles()
 del Mnprng_use
 
-print("All the random numbers in the tee file:")
-print(get_rnds_from_file("tee.dat"))
-
 Mnprng_stu = NamedPrng(mpurposes)
 
 print("\nLoad back the particles and generate random numbers for quarks for random_walk.")
-print(Mnprng_stu.generate_rl(Distr.UNI, ["quarks", "random_walk", (0, 2)]))
+print(Mnprng_stu.generate_it(Distr.UNI, ["quarks", "random_walk", (0, 1, 2)]))
 
 os.remove("dict_of_particles.pickle")

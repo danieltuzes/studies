@@ -6,7 +6,7 @@ import filecmp
 from _pytest.python_api import approx
 import numpy
 import pytest
-from named_prng import NamedPrng, FStrat, Distr
+from namedPrng.named_prng import NamedPrng, FStrat, Distr
 
 quarks = {"up": 0, "down": 1, "charm": 2, "strange": 3, "top": 4, "bottom": 5}
 atoms = {"H": 0, "He": 1, "Li": 2, "Be": 3}
