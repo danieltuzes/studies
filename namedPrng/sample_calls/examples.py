@@ -13,12 +13,12 @@ For a more detailed test, check the ``test_named_prng.py``.
 """
 
 import os
-from namedPrng.named_prng import NamedPrng, FStrat, Distr
-
+from named_prng import NamedPrng, FStrat, Distr
 
 # quarks is a particle type with 6 different IDs as keys
 # The order number will be important once we remove IDs.
-quarks = {"up": 0, "down": 1, "charm": 2, "strange": 3, "top": 4, "bottom": 5}
+quarks = {"up": 0, "down": 1, "charm": 2,
+          "strange": 3, "top": 4, "bottom": 5}
 
 # atoms is another particle type with 4 different IDs as keys.
 # We won't use atoms btw.
@@ -32,6 +32,7 @@ atoms = {"H": 0, "He": 1, "Li": 2, "Be": 3}
 # dict is ordered, but sets are not
 
 mparticles = {"quarks": quarks, "atoms": atoms}
+uparticles = {"quarks": len(quarks), "atoms": len(atoms)}
 
 # I will generate random numbers for a smaller set of IDs too
 remove_quarks = {"charm", "strange"}
@@ -61,7 +62,8 @@ def do_some_stuff(mnprng: NamedPrng) -> None:
 
             # generate random numbers for quarks
             mnprng.init_prngs(realization_id)
-            random_for_quarks = mnprng.generate(Distr.UNI, "quarks", purpose)
+            random_for_quarks = mnprng.generate(
+                Distr.UNI, "quarks", purpose)
 
             for (key, value), rnd in zip(quarks.items(), random_for_quarks):
                 print(key, value, rnd, sep="\t")
@@ -97,7 +99,8 @@ def do_some_stuff(mnprng: NamedPrng) -> None:
                 "========================================================================")
 
     print('--  now for all realizations in 1 go for the purpose "random_walk"  --')
-    print(mnprng.generate_it(Distr.UNI, ["quarks", "random_walk", (0, 1, 2)]))
+    print(mnprng.generate_it(Distr.UNI, [
+        "quarks", "random_walk", (0, 1, 2)]))
 
 
 print("""
@@ -122,6 +125,14 @@ del Mnprng_use
 Mnprng_stu = NamedPrng(mpurposes)
 
 print("\nLoad back the particles and generate random numbers for quarks for random_walk.")
-print(Mnprng_stu.generate_it(Distr.UNI, ["quarks", "random_walk", (0, 1, 2)]))
+print(Mnprng_stu.generate_it(Distr.UNI, [
+    "quarks", "random_walk", (0, 1, 2)]))
 
 os.remove("dict_of_particles.pickle")
+
+print(f"\nPrint out {len(range(0,4))} times random number for quarks.",
+      f"quarks are {len(quarks)} long")
+ind_particles = NamedPrng(mpurposes, uparticles)
+rnd_array = ind_particles.generate_it(
+    Distr.UNI, ("quarks", "random_walk", range(0, 4)))
+print(rnd_array)

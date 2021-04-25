@@ -297,3 +297,6 @@ tee.dat
 # CL/CI artifacts
 **/htmlcov
 **/.coverage
+
+# packaging artifacts
+**/*egg-info/*
