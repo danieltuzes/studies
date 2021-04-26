@@ -25,15 +25,15 @@ start = default_timer()
 # I don't really trust timeit
 
 
-arr = mnprng.generate_r(
-    (Distr.STN, (1, 3)),
-    ["atoms", mpurposes[0], (0, 100)],
-    (words_subset, FStrat.EXC))
-
-# arr = mnprng.generate_r(
+# arr = mnprng.generate_it(
 #     (Distr.STN, (1, 3)),
-#     ["atoms", mpurposes[0], (0, 100)],
-#     (words_subset, FStrat.INC))
+#     ["atoms", mpurposes[0], range(0, 100)],
+#     (words_subset, FStrat.EXC))
+
+arr = mnprng.generate_it(
+    (Distr.STN, (1, 3)),
+    ["atoms", mpurposes[0], range(0, 100)],
+    (words_subset, FStrat.INC))
 
 stop = default_timer()
 print(stop-start)

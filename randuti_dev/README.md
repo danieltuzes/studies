@@ -1,10 +1,11 @@
-# namedPrng
+# randuti
 
-- [namedPrng](#namedprng)
-  - [Details of the model](#details-of-the-model)
-  - [Implementation of the prng container](#implementation-of-the-prng-container)
-    - [The dictionary of dictionary containing the particle IDs](#the-dictionary-of-dictionary-containing-the-particle-ids)
-    - [tee: copy the stream of random numbers to a file](#tee-copy-the-stream-of-random-numbers-to-a-file)
+Random number utilities package that contains the `named_prng` module only.
+
+- [Details of the model](#details-of-the-model)
+- [Implementation of the prng container](#implementation-of-the-prng-container)
+  - [The dictionary of dictionary containing the particle IDs](#the-dictionary-of-dictionary-containing-the-particle-ids)
+  - [tee: copy the stream of random numbers to a file](#tee-copy-the-stream-of-random-numbers-to-a-file)
 
 In one of my professional tasks, I had to implement a prng container for Monte Carlo simulations. The purpose of this container is to improve prn generation by supporting multiple seeds, and instead of seeds, to support named seeds.
 

@@ -2,22 +2,21 @@
 
 New fields I learn or give presentations about.
 
-- [studies](#studies)
-  - [random](#random)
-  - [random test](#random-test)
-  - [named random number engine](#named-random-number-engine)
-  - [random-meta](#random-meta)
-    - [Workflow](#workflow)
-    - [OS-realted user privileges](#os-realted-user-privileges)
-    - [Software requirements](#software-requirements)
-      - [VS Code for development environment](#vs-code-for-development-environment)
-      - [miniconda](#miniconda)
-      - [Miktex](#miktex)
-      - [revealjs](#revealjs)
-        - [Copy the `simple2.css`](#copy-the-simple2css)
-    - [Create html](#create-html)
-    - [Create pptx](#create-pptx)
-    - [Create pdf with latex](#create-pdf-with-latex)
+- [random](#random)
+- [random test](#random-test)
+- [named random number engine](#named-random-number-engine)
+- [random-meta](#random-meta)
+  - [Workflow](#workflow)
+  - [OS-realted user privileges](#os-realted-user-privileges)
+  - [Software requirements](#software-requirements)
+    - [VS Code for development environment](#vs-code-for-development-environment)
+    - [miniconda](#miniconda)
+    - [Miktex](#miktex)
+    - [revealjs](#revealjs)
+      - [Copy the `simple2.css`](#copy-the-simple2css)
+  - [Create html](#create-html)
+  - [Create pptx](#create-pptx)
+  - [Create pdf with latex](#create-pdf-with-latex)
 
 ## random
 
@@ -37,14 +36,14 @@ In [random_test.py](python/random_test.py), you can find some (around 4) tests t
 
 ## named random number engine
 
-In one of my professional tasks, I had to implement a prng container for Monte Carlo simulations. The purpose of this container is to improve prn generation by supporting multiple seeds, and instead of seeds, to support named seeds. 
+In one of my professional tasks, I had to implement a prng container for Monte Carlo simulations. The purpose of this container is to improve prn generation by supporting multiple seeds, and instead of seeds, to support named seeds.
 
 - The first step is to print out all the random numbers used by the model, which produced the result A, store them in a file,
 - and then use this super container to feed the model with the same numbers. This time I should get the same result A.
 - Then the file-based random number feed has to replaced by a prng algorithm, like Mersenne Twister. This time the model should produce different result B. I can write out the random numbers again, into a file, and use the file instead of the algorithm producing the same B result. So we can see how changing the random number engine from a basic math algorithm to file-based solution keeps the same result A.
 - Then we change the random numbers, and get result B, but the result remains the same if we change the source of random numbers from a file to a math algorithm again.
 
-The details of the class can be found in the [readme of namedPrng](namedPrng/README.md).
+The details of the class can be found in the [readme of randuti](randuti/README.md). The class is in a module `named_prng` that is distributed as a package called `randuti`.
 
 ## random-meta
 
