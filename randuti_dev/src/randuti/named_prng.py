@@ -92,14 +92,17 @@ class NamedPrng:
                                   Dict[str, Dict[str, int]],
                                   Dict[str, int]] = "dict_of_particles.pickle",
                  realization_id: int = None,
-                 exim_settings: Tuple[str, str, bool] = (None, None, None)) -> None:
+                 exim_settings: Tuple[str, str, bool] = (None, None, None)
+                 ) -> None:
         """Parameters
         -----------------
         purposes: List[str]
             prng instances are assigned to particle types and purposes, i.e.
             for a particle types, where you have a dict of particle IDs, you
             can have multiple prngs associated to it.
-        particles: Union[str, Dict[str, Dict[str, int]],Dict[str, int]]] = "dict_of_particles.pickle"
+        particles: Union[str,
+                         Dict[str, Dict[str, int]],
+                         Dict[str, int]] = "dict_of_particles.pickle"
             Create the physical, financial or whatever related entities
             (particles) that will be assigned random numbers to,
             together with their entity type (particle type).
@@ -147,7 +150,9 @@ class NamedPrng:
         self._chk_seed_limits()
 
         teefilename = exim_settings[0]
-        if teefilename is None or teefilename == "":  # where to copy the generated prn-s
+
+        # where to copy the generated prn-s
+        if teefilename is None or teefilename == "":
             self._teefile = None
         else:
             try:
@@ -161,7 +166,9 @@ class NamedPrng:
                 self._teefile = None
 
         sourcefilename = exim_settings[1]
-        if sourcefilename is None or sourcefilename == "":  # from where to read the random numbers
+
+        # from where to read the random numbers
+        if sourcefilename is None or sourcefilename == "":
             self._sourcefile = None
         else:
             try:
@@ -188,7 +195,9 @@ class NamedPrng:
                           purposes: List[str],
                           particles: Union[str,
                                            Dict[str, Dict[str, int]],
-                                           Dict[str, int]]) -> Union[Dict[str, Dict[str, int]], Dict[str, int]]:
+                                           Dict[str, int]]
+                          ) -> Union[Dict[str, Dict[str, int]],
+                                     Dict[str, int]]:
 
         # create from file
         if isinstance(particles, str):
@@ -247,7 +256,9 @@ class NamedPrng:
             self._engines[ptype] = dict()
             for purpose in purposes:
                 self._engines[ptype][purpose] = numpy.random.Generator(
-                    numpy.random.MT19937(self._seed_map(realization_id, ptype, purpose)))
+                    numpy.random.MT19937(self._seed_map(realization_id,
+                                                        ptype,
+                                                        purpose)))
 
     def _exclude_ids(self,
                      arr: numpy.ndarray,
@@ -301,7 +312,8 @@ class NamedPrng:
                  rnd_type: Union["Distr", Tuple["Distr", Tuple[float, float]]],
                  ptype: str,
                  purpose: str,
-                 id_filter: Tuple[Iterable, "FStrat"] = (None, None)) -> numpy.ndarray:
+                 id_filter: Tuple[Iterable, "FStrat"] = (None, None)
+                 ) -> numpy.ndarray:
         """Generates random numbers using the initialized PRNGs.
 
         If _sourcefile is not set, random numbers with a
@@ -331,7 +343,7 @@ class NamedPrng:
             and prng instances are independent purpose-wise.
 
         id_filter: (ids, filtering strategy)
-            Fitlers random numbers for a specific set of particles if particles
+            Filters random numbers for a specific set of particles if particles
             were created with unique name and order number.
 
             - if filtering strategy is FStrat.INC or None,
@@ -396,9 +408,11 @@ class NamedPrng:
         return ret
 
     def generate_it(self,
-                    rnd_type: Union["Distr", Tuple["Distr", Tuple[float, float]]],
+                    rnd_type: Union["Distr",
+                                    Tuple["Distr", Tuple[float, float]]],
                     seed_args: Tuple[str, str, Iterable],
-                    id_filter: Tuple[Iterable, "FStrat"] = (None, None)) -> numpy.ndarray:
+                    id_filter: Tuple[Iterable, "FStrat"] = (None, None)
+                    ) -> numpy.ndarray:
         """Generates random numbers for a range or list of realizations.
 
         If _sourcefile is not set, returns a 2D array of random numbers with
@@ -427,7 +441,7 @@ class NamedPrng:
             range(min_id, max_id) or a list of ids.
 
         id_filter: (ids, filtering strategy)
-            Fitlers random numbers for a specific set of particles if particles
+            Filters random numbers for a specific set of particles if particles
             were created with unique name and order number.
 
             - if filtering strategy is FStrat.INC or None,
@@ -493,7 +507,8 @@ class NamedPrng:
             return self._particles[ptype]
         return len(self._particles[ptype])
 
-    def export_particles(self, filename: str = "dict_of_particles.pickle") -> None:
+    def export_particles(self,
+                         filename: str = "dict_of_particles.pickle") -> None:
         """Exports the attribute _particles.
 
         _particles contain the particles, including the particle types,
