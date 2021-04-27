@@ -1,24 +1,26 @@
-"""named_prng.py
-This file contains the implementation of the
-named pseudo random number generator. Detailed documentation is available
-in the README.md file too. Check out examples.py for examples!
+"""Implementation of a pseudo random number generator container.
+
+Detailed documentation is available in the README.md file.
+Check out examples.py for examples!
 """
 
+from enum import Enum, auto
 import pickle
 import sys
 from typing import Dict, Iterable, Tuple, List, Union
-from enum import Enum, auto
 import numpy
 
 
 class FStrat(Enum):
     """Filtering strategy: include or exclude."""
+
     INC = auto()
     EXC = auto()
 
 
 class Distr(Enum):
-    """Distributions. UNI: uniform, STN: standard normal"""
+    """Distributions. UNI: uniform, STN: standard normal."""
+
     UNI = auto()
     STN = auto()
 
@@ -32,7 +34,7 @@ class NamedPrng:
     they are called particles throughout this class.
 
     Attributes
-    -----------
+    ----------
     N_max: int
         Maximum number of particle type - purpose
         combination. Changing this value breaks realization-wise comparison
@@ -81,6 +83,7 @@ class NamedPrng:
             random numbers will be written into _teefile.
             If _sourcefile is used, only the necessary random numbers
             will be read in.
+
     """
 
     N_max = 100  # maximum number of particle type - purpose combinations
@@ -94,8 +97,10 @@ class NamedPrng:
                  realization_id: int = None,
                  exim_settings: Tuple[str, str, bool] = (None, None, None)
                  ) -> None:
-        """Parameters
-        -----------------
+        """Initialize the a class instance.
+
+        Parameters
+        ----------
         purposes: List[str]
             prng instances are assigned to particle types and purposes, i.e.
             for a particle types, where you have a dict of particle IDs, you
@@ -143,9 +148,9 @@ class NamedPrng:
                 random numbers will be written into _teefile.
                 If _sourcefile is used, only the necessary random numbers
                 will be read in.
-        """
 
-        self._particles = self._constr_particles(purposes, particles)
+        """
+        self._particles = _constr_particles(particles)
         self._purposes = purposes
         self._chk_seed_limits()
 
@@ -191,30 +196,8 @@ class NamedPrng:
         else:
             self._only_used = False
 
-    def _constr_particles(self,
-                          purposes: List[str],
-                          particles: Union[str,
-                                           Dict[str, Dict[str, int]],
-                                           Dict[str, int]]
-                          ) -> Union[Dict[str, Dict[str, int]],
-                                     Dict[str, int]]:
-
-        # create from file
-        if isinstance(particles, str):
-            try:
-                with open(particles, "rb") as ifile:
-                    particles = pickle.load(ifile)
-            except OSError as err:
-                message = ("Cannot open file " + particles +
-                           " for unpickling to load particles, " +
-                           "because an OSError occurred: " + str(err))
-                sys.exit(message)
-
-        # create from explicit dict
-        return particles
-
     def _chk_seed_limits(self):
-        """Checks if unique seed for each ptype and purpose can be ensured."""
+        """Check if unique seed for each ptype and purpose can be ensured."""
         if (len(self._particles) > self.N_ptl or
                 len(self._purposes) * self.N_ptl > self.N_max):
             message = ("The NamedPrng is fed with " +
@@ -228,7 +211,7 @@ class NamedPrng:
             sys.exit(message)
 
     def _seed_map(self, realization: int, ptype: str, purpose: str) -> int:
-        """Assigns a seed to a realization and particle type."""
+        """Assign a seed to a realization and particle type."""
         ptype_order = list(self._particles.keys()).index(ptype)
         seed = (realization * self.N_max +
                 self._purposes.index(purpose) * self.N_ptl +
@@ -246,7 +229,6 @@ class NamedPrng:
         and for all or a given list of purposes.
         If the purposes list is None, all possibilities are initialized.
         """
-
         if ptypes is None:
             ptypes = self._particles.keys()
         if purposes is None:
@@ -264,13 +246,12 @@ class NamedPrng:
                      arr: numpy.ndarray,
                      ptype: str,
                      exclude_ids: Iterable) -> numpy.ndarray:
-        """Excludes the ids provided from the return array.
+        """Exclude the ids provided from the return array.
 
         Useful if you need to remove some elements from the array.
         Random numbers have been already generated and although you may
         exclude them, they affected the state of the prng instance!
         """
-
         # indices to exclude
         exclude_ind = [self._particles[ptype][mid] for mid in exclude_ids]
 
@@ -287,7 +268,6 @@ class NamedPrng:
         and memory is allocated for them once already. Although you may
         exclude them, they affected the state of the prng instance!
         """
-
         keep_indices = numpy.ndarray(len(include_ids), dtype=numpy.uint32)
         for index, mid in enumerate(include_ids):
             keep_indices[index] = self._particles[ptype][mid]
@@ -298,7 +278,6 @@ class NamedPrng:
                     arr: numpy.ndarray,
                     ptype: str) -> numpy.array:
         """Include or excludes particles from the array."""
-
         if (id_filter[1] == FStrat.EXC and
                 not (self._sourcefile is not None and self._only_used)):
             return self._exclude_ids(arr, ptype, id_filter[0])
@@ -314,7 +293,7 @@ class NamedPrng:
                  purpose: str,
                  id_filter: Tuple[Iterable, "FStrat"] = (None, None)
                  ) -> numpy.ndarray:
-        """Generates random numbers using the initialized PRNGs.
+        """Generate random numbers using the initialized PRNGs.
 
         If _sourcefile is not set, random numbers with a
         type and properties passed as rnd_type, for each of the particles
@@ -324,25 +303,23 @@ class NamedPrng:
         or by calling: func: `init_prngs`.
 
         Parameters
-        ------------
-        rnd_type: Distr.UNI | Distr.STN | (Distr.STN, (loc, scale))
+        ----------
+        rnd_type : Union["Distr", Tuple["Distr", Tuple[float, float]]]
+            The distribution type of the random numbers.
 
-            - which be an enum Distr.UNI, which defines the uniform
+            - can be an enum Distr.UNI, which defines the uniform
                 distribution on[0, 1)
             - or an enum Distr.STN, which defines a standard normal
                 distribution with a mean 0 and std 1
             - or a tuple of  Distr.STN, (mean, std), e.g.
                 (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
-
-        ptype: str
+        ptype : str
             For which particle type should the engine generate random numbers
-
-        purpose: str
+        purpose : str
             For what purpose would you like to generate the random numbers.
             For different purpose, you get different set of random numbers,
             and prng instances are independent purpose-wise.
-
-        id_filter: (ids, filtering strategy)
+        id_filter : Tuple[Iterable,, optional
             Filters random numbers for a specific set of particles if particles
             were created with unique name and order number.
 
@@ -355,22 +332,24 @@ class NamedPrng:
             value of the correcponding ID key of the particles.
 
         Returns
-        -----------------------
-        numpy.ndarray:
-            shape(number of realizations, number of particles)
-            It has as many rows as many realization_id are in the range of
-            [realization_id_start, realization_id_end),
-            and it has as many columns as many particles with type ptype
-            can be found, and it has dtype = numpy.float64.
+        -------
+            numpy.ndarray:
+                shape(number of realizations, number of particles)
+                It has as many rows as many realization_id are in the range of
+                [realization_id_start, realization_id_end),
+                and it has as many columns as many particles with type ptype
+                can be found, and it has dtype = numpy.float64.
 
-        Modifies the state of the prng instance associated with ptype
-        and advances as many steps as many particles with ptype can
-        be found, regardless the id_filter.
+        Notes
+        -----
+            Modifies the state of the prng instance associated with ptype
+            and advances as many steps as many particles with ptype can
+            be found, regardless the id_filter.
 
-        If _sourcefile is set, reads in 64-bit floats from _sourcefile
-        and does not modify the state of the prng instance.
+            If _sourcefile is set, reads in 64-bit floats from _sourcefile
+            and does not modify the state of the prng instance.
+
         """
-
         amount = self._getamount(ptype)
         ret = numpy.ndarray(amount, dtype=numpy.float64)
 
@@ -413,7 +392,7 @@ class NamedPrng:
                     seed_args: Tuple[str, str, Iterable],
                     id_filter: Tuple[Iterable, "FStrat"] = (None, None)
                     ) -> numpy.ndarray:
-        """Generates random numbers for a range or list of realizations.
+        """Generate random numbers for a range or list of realizations.
 
         If _sourcefile is not set, returns a 2D array of random numbers with
         a type and properties passed as rnd_type,
@@ -424,22 +403,19 @@ class NamedPrng:
         realization_id parameters.
 
         Parameters
-        -----------------------
-        rnd_type: Distr.UNI | Distr.STN | (Distr.STN, (loc, scale))
+        ----------
+        rnd_type : Union["Distr", Tuple["Distr", Tuple[float, float]]]
+            The distribution type of the random numbers.
 
-            - which be an enum Distr.UNI, which defines the uniform
+            - can be an enum Distr.UNI, which defines the uniform
                 distribution on[0, 1)
             - or an enum Distr.STN, which defines a standard normal
                 distribution with a mean 0 and std 1
             - or a tuple of  Distr.STN, (mean, std), e.g.
                 (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
-
         seed_args: (ptype, purpose, iterable(realization ids))
-            Values that affect the seeds.
-
-            seed_args[2] can be an iterable range, like
-            range(min_id, max_id) or a list of ids.
-
+            Values that affect the seeds. seed_args[2] can be an iterable
+            range, like range(min_id, max_id) or a list of ids.
         id_filter: (ids, filtering strategy)
             Filters random numbers for a specific set of particles if particles
             were created with unique name and order number.
@@ -451,14 +427,13 @@ class NamedPrng:
             particles the random numbers should be omitted from the return
             value. The order number of the random numbers are read from the
             value of the correcponding ID key of the particles.
-
         params: (loc, scale) = (0, 1)
             The parameters passed to numpy's normal function,
             i.e. the loc and scale paramters defining the
             mean and the standard deviation.
 
         Returns
-        -----------------------
+        -------
         numpy.ndarray:
             shape(number of realizations, number of particles)
             It has as many rows as many realization_id are in the range of
@@ -466,14 +441,16 @@ class NamedPrng:
             and it has as many columns as many particles with type ptype
             can be found, and it has dtype = numpy.float64.
 
+        Notes
+        -----
         Modifies the state of the prng instance associated with ptype
         and advances as many steps as many particles with ptype can
         be found, regardless the id_filter.
 
         If _sourcefile is set, reads in 64-bit floats from _sourcefile
         and does not modify the state of the prng instance.
-        """
 
+        """
         ptype = seed_args[0]
         purpose = seed_args[1]
 
@@ -495,30 +472,48 @@ class NamedPrng:
         return ret
 
     def _tee(self, arr: numpy.ndarray) -> numpy.ndarray:
-        """Copies arr to _teefile if exists and returns the array."""
+        """Copy arr to _teefile if exists and returns the array."""
         if self._teefile is not None:
             arr.tofile(self._teefile)
         return arr
 
     def _getamount(self, ptype: str) -> int:
-        """Tells how many particles exist with in one ptype."""
-
+        """Tell how many particles exist with in one ptype."""
         if isinstance(self._particles[ptype], int):
             return self._particles[ptype]
         return len(self._particles[ptype])
 
     def export_particles(self,
                          filename: str = "dict_of_particles.pickle") -> None:
-        """Exports the attribute _particles.
+        """Export the attribute _particles.
 
         _particles contain the particles, including the particle types,
         particle ID and their order number.
         Uses pickle to save the dictionary.
         """
-
         try:
             with open(filename, "wb") as ofile:
                 pickle.dump(self._particles, ofile, 4)
         except OSError as err:
             print("Cannot export particles to", filename,
                   "because an OSError occurred:", err)
+
+
+def _constr_particles(particles: Union[str,
+                                       Dict[str, Dict[str, int]],
+                                       Dict[str, int]]
+                      ) -> Union[Dict[str, Dict[str, int]], Dict[str, int]]:
+    """Construct particles from file or return the original argument."""
+    # create from file
+    if isinstance(particles, str):
+        try:
+            with open(particles, "rb") as ifile:
+                particles = pickle.load(ifile)
+        except OSError as err:
+            message = ("Cannot open file " + particles +
+                       " for unpickling to load particles, " +
+                       "because an OSError occurred: " + str(err))
+            sys.exit(message)
+
+    # create from explicit dict
+    return particles
