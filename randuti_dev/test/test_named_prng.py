@@ -329,3 +329,45 @@ def test_generate_it_it() -> None:
 
         pytest.approx(ret1by1) == retlist
         pytest.approx(retrang) == retlist
+
+
+def test_generate_r_t() -> None:
+    """Test the generate_r_t function.
+
+    For a subset of particles, create random numbers 2 times using the time
+    range [1,3) for realizations 4 and 5, by including one half of the
+    particles by including, then for the same half by excluding to see
+    the same case and see if we get the same numbers.
+
+    Then generate for time range [0,3) and manually exclude t=0 to see if
+    non-0 time_start behaves well.
+    """
+    for particle_type in [mparticles, uparticles]:
+        ids = [4, 5]
+        mnprng = NamedPrng(mpurposes, particle_type)
+        if particle_type == mparticles:
+            id_filter = (remove_quarks, FStrat.EXC)
+        else:
+            id_filter = (None, None)
+        arr1 = mnprng.generate_r_t(Distr.UNI,
+                                   ("quarks", mpurposes[0], ids),
+                                   (1, 3),
+                                   id_filter=id_filter)
+
+        if particle_type == mparticles:
+            id_filter = (quarks_subset, FStrat.INC)
+        else:
+            id_filter = (None, None)
+        arr2 = mnprng.generate_r_t(Distr.UNI,
+                                   ("quarks", mpurposes[0], ids),
+                                   (1, 3),
+                                   id_filter=id_filter)
+
+        assert pytest.approx(arr1) == arr2
+
+        arr3 = mnprng.generate_r_t(Distr.UNI,
+                                   ("quarks", mpurposes[0], ids),
+                                   (0, 3),
+                                   id_filter=id_filter)
+
+        assert pytest.approx(arr3[:, 1:3]) == arr2

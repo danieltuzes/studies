@@ -149,6 +149,12 @@ class NamedPrng:
                 If _sourcefile is used, only the necessary random numbers
                 will be read in.
 
+        Raises
+        ------
+        OSError
+            If teefile cannot be opened for binary append or
+            if sourcefilename cannot be opened for binary read.
+
         """
         self._particles = _constr_particles(particles)
         self._purposes = purposes
@@ -161,14 +167,19 @@ class NamedPrng:
             self._teefile = None
         else:
             try:
-                self._teefile = open(teefilename, "ab")
+                self._teefile = open(
+                    teefilename, "ab")  # pylint: consider-using-with
+
+                # self._teefile will live after the try is executed
+                # `with` would free up the resource
             except OSError as err:
-                print("Cannot initialize a NamedPrng instance,",
-                      "because teefilename is set but OSError occurred",
-                      "while opening the file for binary appending.",
-                      "No _teefile will be used.",
-                      "Error details:", err)
                 self._teefile = None
+                note = ("Cannot initialize a NamedPrng instance,"
+                        "because teefilename is set but OSError occurred"
+                        "while opening the file for binary appending."
+                        "No _teefile will be used."
+                        "Error details:")
+                raise OSError(note) from err
 
         sourcefilename = exim_settings[1]
 
@@ -177,14 +188,16 @@ class NamedPrng:
             self._sourcefile = None
         else:
             try:
-                self._sourcefile = open(sourcefilename, "rb")
+                self._sourcefile = open(
+                    sourcefilename, "rb")  # pylint: consider-using-with
             except OSError as err:
-                print("Cannot initialize a NamedPrng instance,",
-                      "because sourcefilename is set but OSError occurred",
-                      "while opening the file for binary reading.",
-                      "prng will be used instead of the _sourcefile.",
-                      "Error details:", err)
                 self._sourcefile = None
+                note = ("Cannot initialize a NamedPrng instance,",
+                        "because sourcefilename is set but OSError occurred",
+                        "while opening the file for binary reading.",
+                        "prng will be used instead of the _sourcefile.",
+                        "Error details:")
+                raise OSError(note) from err
 
         self._engines = dict()   # the prng instances
 
@@ -392,14 +405,14 @@ class NamedPrng:
                     seed_args: Tuple[str, str, Iterable],
                     id_filter: Tuple[Iterable, "FStrat"] = (None, None)
                     ) -> numpy.ndarray:
-        """Generate random numbers for a range or list of realizations.
+        """Generate random numbers for realizations x particles.
 
         If _sourcefile is not set, returns a 2D array of random numbers with
         a type and properties passed as rnd_type,
         for all realization ID and for each particle with type ptype for
         the specified purpose that matches the filter criterion id_filter.
         Automatically initialize the prngs. The behavior is identical to
-        calling: func: `init_prngs` and: func: `normal` with the proper
+        calling: func: `init_prngs` and: func: `generate` with the proper
         realization_id parameters.
 
         Parameters
@@ -451,8 +464,84 @@ class NamedPrng:
         and does not modify the state of the prng instance.
 
         """
-        ptype = seed_args[0]
-        purpose = seed_args[1]
+        ret = self.generate_r_t(rnd_type, seed_args, (0, 1), id_filter)
+        return ret.reshape((ret.shape[0], ret.shape[2]))
+
+    def generate_r_t(self,
+                     rnd_type: Union["Distr",
+                                     Tuple["Distr", Tuple[float, float]]],
+                     seed_args: Tuple[str, str, Iterable],
+                     time_range: Tuple[int, int],
+                     id_filter: Tuple[Iterable, "FStrat"] = (None, None)
+                     ) -> numpy.ndarray:
+        """Generate random numbers for realizations X times x particles.
+
+        If _sourcefile is not set, returns a 3D array of random numbers with
+        a type and properties passed as rnd_type,
+        for all realization ID, for each time step in the range time_range
+        and for each particle with type ptype for
+        the specified purpose that matches the filter criterion id_filter.
+        Automatically initialize the prngs. The behavior is identical to
+        calling: func: `init_prngs` and: func: `generate` with the proper
+        realization_id parameters, repeated the `generate` enough times.
+
+        Parameters
+        ----------
+        rnd_type : Union["Distr", Tuple["Distr", Tuple[float, float]]]
+            The distribution type of the random numbers.
+
+            - can be an enum Distr.UNI, which defines the uniform
+                distribution on[0, 1)
+            - or an enum Distr.STN, which defines a standard normal
+                distribution with a mean 0 and std 1
+            - or a tuple of  Distr.STN, (mean, std), e.g.
+                (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
+
+        seed_args: (ptype, purpose, iterable(realization ids))
+            Values that affect the seeds. seed_args[2] can be an iterable
+            range, like range(min_id, max_id) or a list of ids.
+        time_range: (t_start, t_end)
+            For each int in the interval [t_start, t_end), random numbers
+            are generated and stored in the returned array.
+        id_filter: (ids, filtering strategy)
+            Filters random numbers for a specific set of particles if particles
+            were created with unique name and order number.
+
+            - if filtering strategy is FStrat.INC or None,
+            ids tells which particles
+            IDs should be used for the random number generation.
+            - If filtering strategy is FStrat.EXC, then ids tells for which
+            particles the random numbers should be omitted from the return
+            value. The order number of the random numbers are read from the
+            value of the correcponding ID key of the particles.
+        params: (loc, scale) = (0, 1)
+            The parameters passed to numpy's normal function,
+            i.e. the loc and scale paramters defining the
+            mean and the standard deviation.
+
+        Returns
+        -------
+        numpy.ndarray:
+            shape(number of realizations,
+                  number of time steps,
+                  number of particles)
+            It has as many blocks as many realization_id are in the range of
+            [realization_id_start, realization_id_end),
+            as many rows as many times steps,
+            and it has as many columns as many particles with type ptype
+            can be found, and it has dtype = numpy.float64.
+
+        Notes
+        -----
+        Modifies the state of the prng instance associated with ptype
+        and advances as many steps as many particles with ptype can
+        be found, regardless the id_filter.
+
+        If _sourcefile is set, reads in 64-bit floats from _sourcefile
+        and does not modify the state of the prng instance.
+
+        """
+        ptype, purpose, realizations = seed_args
 
         tot_amount = self._getamount(ptype)
         sbs_amount = tot_amount  # the amount for the subset
@@ -461,13 +550,25 @@ class NamedPrng:
         elif id_filter[1] == FStrat.INC:
             sbs_amount = len(id_filter[0])
 
-        ret = numpy.ndarray((len(seed_args[2]), sbs_amount),
+        ret = numpy.ndarray((len(realizations),
+                             int(time_range[1])-int(time_range[0]),
+                             sbs_amount),
                             dtype=numpy.float64)
 
-        for count, realization_id in enumerate(seed_args[2]):
+        for r_count, realization_id in enumerate(realizations):
             self.init_prngs(realization_id, [ptype], [purpose])
-            ret_col = self.generate(rnd_type, ptype, purpose, id_filter)
-            ret[count] = ret_col
+            for time in range(0, int(time_range[1])):
+                if time < int(time_range[0]):
+                    # no need to filter, it takes time
+                    ret_col = self.generate(rnd_type, ptype, purpose)
+                    # no need to save the random numbers
+                else:
+                    t_count = time - time_range[0]
+                    ret_col = self.generate(rnd_type,
+                                            ptype,
+                                            purpose,
+                                            id_filter)
+                    ret[r_count][t_count] = ret_col
 
         return ret
 
