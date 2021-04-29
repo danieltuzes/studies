@@ -1,0 +1,11 @@
+numpy
+pandas
+pytest
+pylint
+mccabe
+pyflakes
+pylama
+pydocstyle
+pycodestyle
+coverage
+autopep8

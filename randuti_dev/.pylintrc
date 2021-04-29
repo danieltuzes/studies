@@ -1,0 +1,6 @@
+[MESSAGES CONTROL]
+
+# I want to disable warnings about unknown options.
+# The option will be known once pylint gets updated.
+# With this I disable a false positive case.
+disable=unrecognized-inline-option
