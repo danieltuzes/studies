@@ -19,10 +19,11 @@ class FStrat(Enum):
 
 
 class Distr(Enum):
-    """Distributions. UNI: uniform, STN: standard normal."""
+    """Distributions. UNI: uniform, STN: standard normal, STU: Student's t"""
 
     UNI = auto()
     STN = auto()
+    STU = auto()
 
 
 class NamedPrng:
@@ -167,8 +168,8 @@ class NamedPrng:
             self._teefile = None
         else:
             try:
-                self._teefile = open(
-                    teefilename, "ab")  # pylint: consider-using-with
+                self._teefile = open(  # pylint: disable=consider-using-with
+                    teefilename, "ab")
 
                 # self._teefile will live after the try is executed
                 # `with` would free up the resource
@@ -188,8 +189,8 @@ class NamedPrng:
             self._sourcefile = None
         else:
             try:
-                self._sourcefile = open(
-                    sourcefilename, "rb")  # pylint: consider-using-with
+                self._sourcefile = open(  # pylint: disable=consider-using-with
+                    sourcefilename, "rb")
             except OSError as err:
                 self._sourcefile = None
                 note = ("Cannot initialize a NamedPrng instance,",
@@ -213,15 +214,12 @@ class NamedPrng:
         """Check if unique seed for each ptype and purpose can be ensured."""
         if (len(self._particles) > self.N_ptl or
                 len(self._purposes) * self.N_ptl > self.N_max):
-            message = ("The NamedPrng is fed with " +
-                       str(self._getamount(self._particles)) +
-                       " number of types, and with " +
-                       str(len(self._purposes)) +
-                       " number of purposes, while N_ptl = " +
-                       str(self.N_ptl) +
-                       " and N_max = " +
-                       str(self.N_max) + ". Program terminates.")
-            sys.exit(message)
+            note = ("The NamedPrng is fed with"
+                    f" {len(self._particles)} number of types, and with"
+                    f" {len(self._purposes)} number of purposes"
+                    f" while N_ptl = {self.N_ptl}"
+                    f" and N_max = {self.N_max}")
+            raise ValueError(note)
 
     def _seed_map(self, realization: int, ptype: str, purpose: str) -> int:
         """Assign a seed to a realization and particle type."""
@@ -375,7 +373,7 @@ class NamedPrng:
                 ret = self._engines[ptype][purpose].normal(
                     loc=rnd_type[1][0], scale=rnd_type[1][1], size=amount)
             else:
-                sys.exit("Unsupported rnd_type " + str(rnd_type))
+                raise NotImplementedError(f"Unsupported rnd_type {rnd_type}")
         else:
             if self._only_used:
                 if id_filter[1] == FStrat.EXC:
@@ -543,8 +541,7 @@ class NamedPrng:
         """
         ptype, purpose, realizations = seed_args
 
-        tot_amount = self._getamount(ptype)
-        sbs_amount = tot_amount  # the amount for the subset
+        sbs_amount = self._getamount(ptype)  # the amount for the subset
         if id_filter[1] == FStrat.EXC:
             sbs_amount -= len(id_filter[0])
         elif id_filter[1] == FStrat.INC:
@@ -596,8 +593,10 @@ class NamedPrng:
             with open(filename, "wb") as ofile:
                 pickle.dump(self._particles, ofile, 4)
         except OSError as err:
-            print("Cannot export particles to", filename,
-                  "because an OSError occurred:", err)
+            note = ("Cannot export particles to"
+                    + filename
+                    + "because an OSError occurred:")
+            raise OSError(note) from err
 
 
 def _constr_particles(particles: Union[str,
@@ -611,10 +610,11 @@ def _constr_particles(particles: Union[str,
             with open(particles, "rb") as ifile:
                 particles = pickle.load(ifile)
         except OSError as err:
-            message = ("Cannot open file " + particles +
-                       " for unpickling to load particles, " +
-                       "because an OSError occurred: " + str(err))
-            sys.exit(message)
+            note = ("Cannot open file "
+                    + particles
+                    + " for unpickling to load particles, "
+                    + "because an OSError occurred:")
+            raise OSError(note) from err
 
     # create from explicit dict
     return particles
