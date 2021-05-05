@@ -1,6 +1,7 @@
 numpy
 pandas
 pytest
+pytest-cov
 pylint
 mccabe
 pyflakes

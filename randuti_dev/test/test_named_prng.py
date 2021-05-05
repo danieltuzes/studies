@@ -327,8 +327,8 @@ def test_generate_it_it() -> None:
         retrang[3:6] = mnprngrang.generate_it(
             Distr.STN, (p_type, purpose, range(7, 10)))
 
-        pytest.approx(ret1by1) == retlist
-        pytest.approx(retrang) == retlist
+        assert pytest.approx(ret1by1) == retlist
+        assert pytest.approx(retrang) == retlist
 
 
 def test_generate_r_t() -> None:
@@ -371,3 +371,44 @@ def test_generate_r_t() -> None:
                                    id_filter=id_filter)
 
         assert pytest.approx(arr3[:, 1:3]) == arr2
+
+
+def test_bad_filenames():
+    """Checks if exim settings exceptions are handled properly."""
+    wrong_filename = "very/bad:filename?here*"
+    with pytest.raises(OSError):
+        mnprng = NamedPrng(mpurposes,
+                           wrong_filename,
+                           None)
+
+    with pytest.raises(OSError):
+        mnprng = NamedPrng(mpurposes,
+                           mparticles,
+                           None,
+                           (wrong_filename, None, False))
+
+    with pytest.raises(OSError):
+        mnprng = NamedPrng(mpurposes,
+                           mparticles,
+                           None,
+                           (None, wrong_filename, False))
+
+    with pytest.raises(OSError):
+        mnprng = NamedPrng(mpurposes,
+                           mparticles)
+        mnprng.export_particles(wrong_filename)
+
+
+def test_violate_seed_limits():
+    """Check for too many list x ptype combination."""
+    mlist = [str(i) for i in range(0, 10**6)]
+    with pytest.raises(ValueError):
+        mnprng = NamedPrng(mlist,  # pylint: disable=unused-variable
+                           mparticles)
+
+
+def test_unsupported_rnd_type():
+    """Test for not supported random number type."""
+    with pytest.raises(NotImplementedError):
+        mnprng = NamedPrng(mpurposes,  # pylint: disable=unused-variable
+                           mparticles)
