@@ -412,3 +412,5 @@ def test_unsupported_rnd_type():
     with pytest.raises(NotImplementedError):
         mnprng = NamedPrng(mpurposes,  # pylint: disable=unused-variable
                            mparticles)
+        mnprng.generate_it(Distr.STU,
+                           ["quarks", mpurposes[0], range(0, 2)])
