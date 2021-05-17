@@ -69,24 +69,25 @@ def test_normal() -> None:
             ret_arrs[i] = mnprng_gen.generate((Distr.STN, param_pair),
                                               "quarks", "random_walk")
 
-        orig_arr = numpy.array([[-1.0625151089e+00, -1.0596945414e+00, -9.8609030314e-01,
-                                 -1.0276130879e+00, -9.9928650089e-01, -1.0060799379e+00],
-                                [-1.6251510894e+00, -1.5969454139e+00, -8.6090303136e-01,
-                                 -1.2761308794e+00, -9.9286500888e-01, -1.0607993786e+00],
-                                [-7.2515108944e+00, -6.9694541388e+00,  3.9096968635e-01,
-                                 -3.7613087942e+00, -9.2865008877e-01, -1.6079937856e+00],
-                                [-6.2515108944e-02, -5.9694541388e-02,  1.3909696864e-02,
-                                 -2.7613087942e-02,  7.1349911225e-04, -6.0799378562e-03],
-                                [-6.2515108944e-01, -5.9694541388e-01,  1.3909696864e-01,
-                                 -2.7613087942e-01,  7.1349911225e-03, -6.0799378562e-02],
-                                [-6.2515108944e+00, -5.9694541388e+00,  1.3909696864e+00,
-                                 -2.7613087942e+00,  7.1349911225e-02, -6.0799378562e-01],
-                                [9.3748489106e-01,  9.4030545861e-01,  1.0139096969e+00,
-                                 9.7238691206e-01,  1.0007134991e+00,  9.9392006214e-01],
-                                [3.7484891056e-01,  4.0305458612e-01,  1.1390969686e+00,
-                                 7.2386912058e-01,  1.0071349911e+00,  9.3920062144e-01],
-                                [-5.2515108944e+00, -4.9694541388e+00,  2.3909696864e+00,
-                                 -1.7613087942e+00,  1.0713499112e+00,  3.9200621438e-01]])
+        orig_arr = numpy.array(
+            [[-1.0625151089e+00, -1.0596945414e+00, -9.8609030314e-01,
+              -1.0276130879e+00, -9.9928650089e-01, -1.0060799379e+00],
+             [-1.6251510894e+00, -1.5969454139e+00, -8.6090303136e-01,
+              -1.2761308794e+00, -9.9286500888e-01, -1.0607993786e+00],
+             [-7.2515108944e+00, -6.9694541388e+00,  3.9096968635e-01,
+              -3.7613087942e+00, -9.2865008877e-01, -1.6079937856e+00],
+             [-6.2515108944e-02, -5.9694541388e-02,  1.3909696864e-02,
+              -2.7613087942e-02,  7.1349911225e-04, -6.0799378562e-03],
+             [-6.2515108944e-01, -5.9694541388e-01,  1.3909696864e-01,
+              -2.7613087942e-01,  7.1349911225e-03, -6.0799378562e-02],
+             [-6.2515108944e+00, -5.9694541388e+00,  1.3909696864e+00,
+              -2.7613087942e+00,  7.1349911225e-02, -6.0799378562e-01],
+             [9.3748489106e-01,  9.4030545861e-01,  1.0139096969e+00,
+              9.7238691206e-01,  1.0007134991e+00,  9.9392006214e-01],
+             [3.7484891056e-01,  4.0305458612e-01,  1.1390969686e+00,
+              7.2386912058e-01,  1.0071349911e+00,  9.3920062144e-01],
+             [-5.2515108944e+00, -4.9694541388e+00,  2.3909696864e+00,
+              -1.7613087942e+00,  1.0713499112e+00,  3.9200621438e-01]])
 
         assert pytest.approx(ret_arrs) == orig_arr
 
@@ -101,7 +102,8 @@ def test_diff_or_identical_cases() -> None:
     """
 
     realization_ids = [1, 2]
-    for particle_type in [mparticles, uparticles]:  # pylint: disable= too-many-nested-blocks
+    # pylint: disable=too-many-nested-blocks
+    for particle_type in [mparticles, uparticles]:
         for mparticle in particle_type:
             for realization_id1 in realization_ids:
                 for mpurpose1 in mpurposes:
@@ -123,6 +125,7 @@ def test_diff_or_identical_cases() -> None:
                                 assert pytest.approx(arr1) == arr2
                             else:
                                 assert pytest.approx(arr1) != arr2
+    # pylint: enable=too-many-nested-blocks
 
 
 def test_subset_exc_inc() -> None:
@@ -373,7 +376,7 @@ def test_generate_r_t() -> None:
         assert pytest.approx(arr3[:, 1:3]) == arr2
 
 
-def test_bad_filenames():
+def test_bad_filenames() -> None:
     """Checks if exim settings exceptions are handled properly."""
     wrong_filename = "very/bad:filename?here*"
     with pytest.raises(OSError):
@@ -399,7 +402,7 @@ def test_bad_filenames():
         mnprng.export_particles(wrong_filename)
 
 
-def test_violate_seed_limits():
+def test_violate_seed_limits() -> None:
     """Check for too many list x ptype combination."""
     mlist = [str(i) for i in range(0, 10**6)]
     with pytest.raises(ValueError):
@@ -407,7 +410,7 @@ def test_violate_seed_limits():
                            mparticles)
 
 
-def test_unsupported_rnd_type():
+def test_unsupported_rnd_type() -> None:
     """Test for not supported random number type."""
     with pytest.raises(NotImplementedError):
         mnprng = NamedPrng(mpurposes,  # pylint: disable=unused-variable
