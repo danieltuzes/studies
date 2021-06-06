@@ -2,21 +2,21 @@
 
 New fields I learn or give presentations about.
 
-- [random](#random)
-- [random test](#random-test)
-- [named random number engine](#named-random-number-engine)
-- [random-meta](#random-meta)
-  - [Workflow](#workflow)
-  - [OS-realted user privileges](#os-realted-user-privileges)
-  - [Software requirements](#software-requirements)
-    - [VS Code for development environment](#vs-code-for-development-environment)
-    - [miniconda](#miniconda)
-    - [Miktex](#miktex)
-    - [revealjs](#revealjs)
-      - [Copy the `simple2.css`](#copy-the-simple2css)
-  - [Create html](#create-html)
-  - [Create pptx](#create-pptx)
-  - [Create pdf with latex](#create-pdf-with-latex)
+- [studies](#studies)
+  - [random](#random)
+  - [random test](#random-test)
+  - [named random number engine](#named-random-number-engine)
+  - [random-meta](#random-meta)
+    - [Workflow](#workflow)
+    - [OS-realted user privileges](#os-realted-user-privileges)
+    - [Software requirements](#software-requirements)
+      - [VS Code for development environment](#vs-code-for-development-environment)
+      - [miniconda](#miniconda)
+      - [Miktex](#miktex)
+      - [revealjs](#revealjs)
+    - [Create html](#create-html)
+    - [Create pptx](#create-pptx)
+    - [Create pdf with latex](#create-pdf-with-latex)
 
 ## random
 
@@ -125,29 +125,42 @@ Modify the path to your pdflatex in the script.
 
 You need this couple of JS and CSS files for the html output to work properly. To be more precise, your software will generate the CSS file from SCSS files you download with revealjs.
 
-If you don't version track your repo or don't want to add [revealjs](https://revealjs.com/installation/) as a submodule, then [download it from github as a zip](https://github.com/hakimel/reveal.js/archive/master.zip), and unpack it as a folder called `reveal.js` next to your presentation file `random.md`.
+- Without version control
 
-If you have git and want to add revealjs as a submodule. Open git bash, cd into your repo and issue
+  If you don't version track your repo or don't want to add [revealjs](https://revealjs.com/installation/) as a submodule, then [download it from github as a zip](https://github.com/hakimel/reveal.js/archive/master.zip), and unpack it as a folder called `reveal.js` next to your presentation file `random.md`.
 
-```bash
-tuzes@PCname MINGW64 ~/source/repos/studies (main)
-$ git submodule add https://github.com/hakimel/reveal.js.git
-```
+  I also included a new theme called `simple2.css`, placed in the root, which has to be copied to `\reveal.js\dist\theme\simple2.css"`. This has a smaller font-size so that all the text aimed to fit into a slide fit into a slide. (I used the beamer template from latex, with default settings, to decide how much content I should put onto one slide.)
 
-With this, you will need to manually copy [`simple2.css`](#copy-the-simple2css). You can also try to clone my own fork containing the right style sheet too:
+- If you have git and want to add revealjs as a submodule, you can
+  - add the original [revealjs](https://revealjs.com/installation/)
+    ```bash
+    tuzes@PCname MINGW64 ~/source/repos/studies (main)
+    $ git submodule add https://github.com/hakimel/reveal.js.git
+    ```
+    
+    You also need to manually copy [`simple2.css`](https://github.com/danieltuzes/reveal.js/blob/smaller-font/dist/theme/simple2.css) to `\reveal.js\dist\theme\simple2.css`.
+    
+  - insted of the original version, you can use my fork if it with the extra style file:
 
-```bash
-tuzes@PCname MINGW64 ~/source/repos/studies (main)
-$ git submodule add https://github.com/danieltuzes/reveal.js
-```
+    ```bash
+    tuzes@PCname MINGW64 ~/source/repos/studies (main)
+    $ git submodule add https://github.com/danieltuzes/reveal.js
+    ```
 
-This will download the repository and checkout the lates version.
+    Then checkout the branch `smaller-font` within the submodule,
 
-##### Copy the `simple2.css`
+    ```bash
+    tuzes@PCname MINGW64 ~/source/repos/studies (main)
+    $ cd reveal.js/
 
-I also included a new theme called `simple2.css`, placed in the root, which has to be copied to `\reveal.js\dist\theme\simple2.css"`. This has a smaller font-size so that all the text aimed to fit into a slide fit into a slide. (I used the beamer template from latex, with default settings, to decide how much content I should put onto one slide.)
+    tuzes@PCname MINGW64 ~/source/repos/studies/reveal.js ((c27e3b5...))
+    $ git checkout smaller-font
+    Previous HEAD position was c27e3b5 add data-auto-animate-id to auto-animate examples #2896
+    Switched to a new branch 'smaller-font'
+    Branch 'smaller-font' set up to track remote branch 'smaller-font' from 'origin'.
+    ```
 
-> Update: I created my own fork of revealjs to include that one and only new css file. Now, you most probably don't need to copy `simple2.css`, but to clone my own fork.
+    Now you have my branch with my modifications.
 
 ### Create html
 
