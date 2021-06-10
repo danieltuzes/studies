@@ -6,9 +6,10 @@ Check out examples.py for examples!
 
 from enum import Enum, auto
 import pickle
-import sys
 from typing import Dict, Iterable, Tuple, List, Union
 import numpy
+
+__version__ = "0.0.1"  # single source of truth
 
 
 class FStrat(Enum):
@@ -19,7 +20,7 @@ class FStrat(Enum):
 
 
 class Distr(Enum):
-    """Distributions. UNI: uniform, STN: standard normal, STU: Student's t"""
+    """Distributions. UNI: uniform, STN: standard normal, STU: Student's t."""
 
     UNI = auto()
     STN = auto()
@@ -36,18 +37,28 @@ class NamedPrng:
 
     Attributes
     ----------
-    N_max: int
-        Maximum number of particle type - purpose
-        combination. Changing this value breaks realization-wise comparison
-        possibility with older runs. The number of particle type - purpose
-        combination must be smaller than this. The seed value has a jump of
-        size N_max between different realizations.
-    N_ptl: int
-        Limit of particle types, the maximum number of particle types.
-        Changing this value breaks realization-wise comparison
-        possibility with older runs. From one purpose to another,
-        for the same particle type, seed value jumps with this value.
-        number of particle types * N_ptl =< N_max must hold.
+    _seed_logic: Tuple[int,int]
+        Consists of (_n_max, _n_ptl).
+        Choose these values as large as you will later.
+        Modifying these values may break seed order and therefore makes it
+        impossible to compare the simulations with previous ones elementwise.
+
+        - _n_max: int
+
+          Maximum number of particle type - purpose
+          combination. Changing this value breaks realization-wise comparison
+          possibility with older runs. The number of particle type - purpose
+          combination must be smaller than this. The seed value has a jump of
+          size _n_max between different realizations.
+
+        - _n_ptl: int
+
+          Limit of particle types, the maximum number of particle types.
+          Changing this value breaks realization-wise comparison
+          possibility with older runs. From one purpose to another,
+          for the same particle type, seed value jumps with this value.
+          number of particle types * _n_ptl =< _n_max must hold.
+
     _particles: Dict[str,Dict[str,int]]
         stores the name of different particle types as key,
         and a dict containing the the particles IDs as keys,
@@ -87,16 +98,13 @@ class NamedPrng:
 
     """
 
-    N_max = 100  # maximum number of particle type - purpose combinations
-    N_ptl = 10   # maximum number of particle types
-
     def __init__(self,
                  purposes: List[str],
                  particles: Union[str,
                                   Dict[str, Dict[str, int]],
                                   Dict[str, int]] = "dict_of_particles.pickle",
-                 realization_id: int = None,
-                 exim_settings: Tuple[str, str, bool] = (None, None, None)
+                 exim_settings: Tuple[str, str, bool] = (None, None, None),
+                 seed_logic: Tuple[int, int] = (100, 10)
                  ) -> None:
         """Initialize the a class instance.
 
@@ -125,11 +133,6 @@ class NamedPrng:
               be distinguished due to the lack of their unique name, therefore
               filtering cannot be applied. Particles can be exported with
               `export_particles`.
-        realization_id: int = None
-            If you set it, your prngs will be initialized immediately and
-            you can generate random numbers for a single realization_id.
-            If you generate random numbers in realization_id ranges,
-            this argument is useless.
         exim_settings: (teefilename, sourcefilename, only_used)
             Random number export and import settings.
 
@@ -150,6 +153,11 @@ class NamedPrng:
                 If _sourcefile is used, only the necessary random numbers
                 will be read in.
 
+        seed_logic: (_n_max, _n_ptl)
+            Set the value of the maximum number of particle type - purpose
+            combination and the value of the maximum number of particle types.
+            Read more in the docstring of the class.
+
         Raises
         ------
         OSError
@@ -157,6 +165,8 @@ class NamedPrng:
             if sourcefilename cannot be opened for binary read.
 
         """
+        self._seed_logic = seed_logic
+
         self._particles = _constr_particles(particles)
         self._purposes = purposes
         self._chk_seed_limits()
@@ -202,9 +212,6 @@ class NamedPrng:
 
         self._engines = dict()   # the prng instances
 
-        if realization_id is not None:
-            self.init_prngs(realization_id)
-
         if len(exim_settings) > 2 and exim_settings[2]:
             self._only_used = True
         else:
@@ -212,20 +219,21 @@ class NamedPrng:
 
     def _chk_seed_limits(self):
         """Check if unique seed for each ptype and purpose can be ensured."""
-        if (len(self._particles) > self.N_ptl or
-                len(self._purposes) * self.N_ptl > self.N_max):
+        if len(self._particles) > self._seed_logic[1] or \
+           (len(self._purposes) * self._seed_logic[1]) > self._seed_logic[0]:
+
             note = ("The NamedPrng is fed with"
                     f" {len(self._particles)} number of types, and with"
                     f" {len(self._purposes)} number of purposes"
-                    f" while N_ptl = {self.N_ptl}"
-                    f" and N_max = {self.N_max}")
+                    f" while _n_ptl = {self._seed_logic[1]}"
+                    f" and _n_max = {self._seed_logic[0]}")
             raise ValueError(note)
 
     def _seed_map(self, realization: int, ptype: str, purpose: str) -> int:
         """Assign a seed to a realization and particle type."""
         ptype_order = list(self._particles.keys()).index(ptype)
-        seed = (realization * self.N_max +
-                self._purposes.index(purpose) * self.N_ptl +
+        seed = (realization * self._seed_logic[0] +
+                self._purposes.index(purpose) * self._seed_logic[1] +
                 ptype_order)
         return seed
 
@@ -344,12 +352,12 @@ class NamedPrng:
 
         Returns
         -------
-            numpy.ndarray:
-                shape(number of realizations, number of particles)
-                It has as many rows as many realization_id are in the range of
-                [realization_id_start, realization_id_end),
-                and it has as many columns as many particles with type ptype
-                can be found, and it has dtype = numpy.float64.
+        numpy.ndarray:
+            shape(number of realizations, number of particles)
+            It has as many rows as many realization_id are in the range of
+            [realization_id_start, realization_id_end),
+            and it has as many columns as many particles with type ptype
+            can be found, and it has dtype = numpy.float64.
 
         Notes
         -----
@@ -597,6 +605,19 @@ class NamedPrng:
                     + filename
                     + "because an OSError occurred:")
             raise OSError(note) from err
+
+    def get_seed_logic(self) -> Tuple[int, int]:
+        """Get the parameters defining the seed logic.
+
+        Returns
+        -------
+        Tuple[int,int]:
+            The (_n_max,_n_ptl) tuple telling the maximum number of
+            particle type - purpose combination and the
+            the maximum number of particle types.
+
+        """
+        return self._seed_logic
 
 
 def _constr_particles(particles: Union[str,

@@ -169,7 +169,8 @@ def test_same_case_after_pickle() -> None:
 
     # uniform, single realization ID
 
-    mnprng_save = NamedPrng(mpurposes, mparticles, realization_id=0)
+    mnprng_save = NamedPrng(mpurposes, mparticles)
+    mnprng_save.init_prngs(realization_id=0)
 
     generate_arg = (Distr.UNI,  # distribution
                     "quarks",  # particle type
@@ -181,8 +182,9 @@ def test_same_case_after_pickle() -> None:
     mnprng_save.export_particles(mparticles_fname)
     del mnprng_save
 
-    mnprng_load = NamedPrng(
-        mpurposes, mparticles_fname, realization_id=0)
+    mnprng_load = NamedPrng(mpurposes, mparticles_fname)
+    mnprng_load.init_prngs(realization_id=0)
+
     arr_load = mnprng_load.generate(*generate_arg)
     del mnprng_load
 
@@ -198,7 +200,8 @@ def test_same_case_after_pickle() -> None:
 
     # distinguishable particles, filtering
 
-    mnprng_save = NamedPrng(mpurposes, mparticles, realization_id=0)
+    mnprng_save = NamedPrng(mpurposes, mparticles)
+    mnprng_save.init_prngs(realization_id=0)
 
     marr_save = mnprng_save.generate_it(
         (Distr.STN, (1, 3)),
@@ -208,8 +211,9 @@ def test_same_case_after_pickle() -> None:
     mnprng_save.export_particles(mparticles_fname)
     del mnprng_save
 
-    mnprng_load = NamedPrng(
-        mpurposes, mparticles_fname, realization_id=0)
+    mnprng_load = NamedPrng(mpurposes, mparticles_fname)
+    mnprng_load.init_prngs(realization_id=0)
+
     marr_load = mnprng_load.generate_it(
         (Distr.STN, (1, 3)),
         seed_args,
@@ -222,15 +226,17 @@ def test_same_case_after_pickle() -> None:
 
     # indistinguishable particles, no filtering
 
-    unprng_save = NamedPrng(mpurposes, uparticles, realization_id=0)
+    unprng_save = NamedPrng(mpurposes, uparticles)
+    unprng_save.init_prngs(realization_id=0)
 
     uarr_save = unprng_save.generate_it((Distr.STN, (1, 3)), seed_args)
     uparticles_fname = "test_same_case_after_pickle_normal_indi"
     unprng_save.export_particles(uparticles_fname)
     del unprng_save
 
-    unprng_load = NamedPrng(
-        mpurposes, uparticles_fname, realization_id=0)
+    unprng_load = NamedPrng(mpurposes, uparticles_fname)
+    unprng_load.init_prngs(realization_id=0)
+
     uarr_load = unprng_load.generate_it((Distr.STN, (1, 3)), seed_args)
 
     assert uarr_save == pytest.approx(uarr_load)
@@ -381,24 +387,20 @@ def test_bad_filenames() -> None:
     wrong_filename = "very/bad:filename?here*"
     with pytest.raises(OSError):
         mnprng = NamedPrng(mpurposes,
-                           wrong_filename,
-                           None)
+                           wrong_filename)
 
     with pytest.raises(OSError):
         mnprng = NamedPrng(mpurposes,
                            mparticles,
-                           None,
                            (wrong_filename, None, False))
 
     with pytest.raises(OSError):
         mnprng = NamedPrng(mpurposes,
                            mparticles,
-                           None,
                            (None, wrong_filename, False))
 
     with pytest.raises(OSError):
-        mnprng = NamedPrng(mpurposes,
-                           mparticles)
+        mnprng = NamedPrng(mpurposes, mparticles)
         mnprng.export_particles(wrong_filename)
 
 
