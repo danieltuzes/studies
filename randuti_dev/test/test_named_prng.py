@@ -38,7 +38,7 @@ def test_uniform() -> None:
     for particles_type in [uparticles, mparticles]:
         mnprng_gen = NamedPrng(mpurposes, particles_type)
         mnprng_gen.init_prngs(0, ["quarks"], ["random_walk"])
-        arr = mnprng_gen.generate(Distr.UNI, "quarks", "random_walk")
+        arr = mnprng_gen.generate(Distr.UNI, ["quarks", "random_walk"])
 
         orig_arr = numpy.array(
             [0.47932306384132817, 0.2864961735272108, 0.022216695186381585,
@@ -67,7 +67,7 @@ def test_normal() -> None:
             mnprng_gen.init_prngs(0, ["quarks"], ["random_walk"])
 
             ret_arrs[i] = mnprng_gen.generate((Distr.STN, param_pair),
-                                              "quarks", "random_walk")
+                                              ["quarks", "random_walk"])
 
         orig_arr = numpy.array(
             [[-1.0625151089e+00, -1.0596945414e+00, -9.8609030314e-01,
@@ -116,9 +116,9 @@ def test_diff_or_identical_cases() -> None:
                             mnprng_gen1.init_prngs(realization_id1)
                             mnprng_gen2.init_prngs(realization_id2)
                             arr1 = mnprng_gen1.generate(
-                                Distr.UNI, mparticle, mpurpose1)
+                                Distr.UNI, [mparticle, mpurpose1])
                             arr2 = mnprng_gen2.generate(
-                                Distr.UNI, mparticle, mpurpose2)
+                                Distr.UNI, [mparticle, mpurpose2])
 
                             if (realization_id1 == realization_id2
                                     and mpurpose1 == mpurpose2):
@@ -170,11 +170,10 @@ def test_same_case_after_pickle() -> None:
     # uniform, single realization ID
 
     mnprng_save = NamedPrng(mpurposes, mparticles)
-    mnprng_save.init_prngs(realization_id=0)
+    mnprng_save.init_prngs(realizations=0)
 
     generate_arg = (Distr.UNI,  # distribution
-                    "quarks",  # particle type
-                    mpurposes[0],  # purpose
+                    ["quarks", mpurposes[0]],  # particle type and purpose
                     (remove_quarks, FStrat.EXC))  # filtering
 
     arr_save = mnprng_save.generate(*generate_arg)
@@ -183,7 +182,7 @@ def test_same_case_after_pickle() -> None:
     del mnprng_save
 
     mnprng_load = NamedPrng(mpurposes, mparticles_fname)
-    mnprng_load.init_prngs(realization_id=0)
+    mnprng_load.init_prngs(realizations=0)
 
     arr_load = mnprng_load.generate(*generate_arg)
     del mnprng_load
@@ -201,7 +200,7 @@ def test_same_case_after_pickle() -> None:
     # distinguishable particles, filtering
 
     mnprng_save = NamedPrng(mpurposes, mparticles)
-    mnprng_save.init_prngs(realization_id=0)
+    mnprng_save.init_prngs(realizations=0)
 
     marr_save = mnprng_save.generate_it(
         (Distr.STN, (1, 3)),
@@ -212,7 +211,7 @@ def test_same_case_after_pickle() -> None:
     del mnprng_save
 
     mnprng_load = NamedPrng(mpurposes, mparticles_fname)
-    mnprng_load.init_prngs(realization_id=0)
+    mnprng_load.init_prngs(realizations=0)
 
     marr_load = mnprng_load.generate_it(
         (Distr.STN, (1, 3)),
@@ -227,7 +226,7 @@ def test_same_case_after_pickle() -> None:
     # indistinguishable particles, no filtering
 
     unprng_save = NamedPrng(mpurposes, uparticles)
-    unprng_save.init_prngs(realization_id=0)
+    unprng_save.init_prngs(realizations=0)
 
     uarr_save = unprng_save.generate_it((Distr.STN, (1, 3)), seed_args)
     uparticles_fname = "test_same_case_after_pickle_normal_indi"
@@ -235,7 +234,7 @@ def test_same_case_after_pickle() -> None:
     del unprng_save
 
     unprng_load = NamedPrng(mpurposes, uparticles_fname)
-    unprng_load.init_prngs(realization_id=0)
+    unprng_load.init_prngs(realizations=0)
 
     uarr_load = unprng_load.generate_it((Distr.STN, (1, 3)), seed_args)
 
@@ -327,7 +326,7 @@ def test_generate_it_it() -> None:
 
         for count, realization_id in enumerate(ids):
             mnprng1by1.init_prngs(realization_id)
-            ret_col = mnprng1by1.generate(Distr.STN, p_type, purpose)
+            ret_col = mnprng1by1.generate(Distr.STN, [p_type, purpose])
             ret1by1[count] = ret_col
 
         retlist = mnprnglist.generate_it(Distr.STN, (p_type, purpose, ids))
@@ -419,3 +418,74 @@ def test_unsupported_rnd_type() -> None:
                            mparticles)
         mnprng.generate_it(Distr.STU,
                            ["quarks", mpurposes[0], range(0, 2)])
+
+
+def test_generate_same_3d() -> None:
+    """Initilizes engines in 3D and generates prns.
+
+    Engines are initialized for realizations, ptype and purpose,
+    and generates random number for the same setup and checks if
+    the corresponding values are the same and the unrelated values
+    are different.
+    """
+    id_filter = (remove_quarks, FStrat.EXC)
+
+    mnprng = NamedPrng(mpurposes, mparticles)
+    reals = [0, 1, 2]
+    mnprng.init_prngs(reals, purposes=["random_walk"])
+
+    out1_t0 = mnprng.generate(Distr.UNI,
+                              ["quarks", "random_walk", reals],
+                              id_filter)
+    out1_t1 = mnprng.generate(Distr.UNI,
+                              ["quarks", "random_walk", reals],
+                              id_filter)
+
+    mnprng2 = NamedPrng(mpurposes, mparticles)
+    mnprng2.init_prngs(reals, purposes=["random_walk"])
+
+    out2_t0 = mnprng2.generate(Distr.UNI,
+                               ["quarks", "random_walk", reals],
+                               id_filter)
+    out2_t1 = mnprng2.generate(Distr.UNI,
+                               ["quarks", "random_walk", reals],
+                               id_filter)
+
+    reals3 = [3, 4, 5]
+    mnprng3 = NamedPrng(mpurposes, mparticles)
+    mnprng3.init_prngs(reals3, purposes=["random_walk"])
+
+    out3_t0 = mnprng3.generate(Distr.UNI,
+                               ["quarks", "random_walk", reals3],
+                               id_filter)
+    out3_t1 = mnprng3.generate(Distr.UNI,
+                               ["quarks", "random_walk", reals3],
+                               id_filter)
+
+    assert (out1_t0 == out2_t0).all()
+    assert (out1_t1 == out2_t1).all()
+    assert (out3_t0 != out2_t0).any()
+    assert (out3_t1 != out2_t1).any()
+    assert (out3_t0 != out2_t1).any()
+
+
+def test_compare_generate_3d_generate_it() -> None:
+    """Compares the 3d init+gen method with the generate_it."""
+    id_filter = (remove_quarks, FStrat.EXC)
+    real_range = [0, 2]
+
+    mnprng1 = NamedPrng(mpurposes, mparticles)
+    mnprng1.init_prngs(real_range, purposes=["random_walk"])
+
+    mnprng2 = NamedPrng(mpurposes, mparticles)
+    out2 = mnprng2.generate_r_t(Distr.UNI,
+                                ["quarks", "random_walk", real_range],
+                                (0, 3),
+                                id_filter)
+
+    for time in range(0, 3):
+        out1 = mnprng1.generate(Distr.UNI,
+                                ["quarks", "random_walk", real_range],
+                                id_filter)
+        for i, _ in enumerate(real_range):
+            assert (out1[i] == out2[i][time]).all()
