@@ -9,7 +9,7 @@ import pickle
 from typing import Dict, Iterable, Tuple, List, Union
 import numpy
 
-__version__ = "1.0.0"  # single source of truth
+__version__ = "1.1.0"  # single source of truth
 
 
 class FStrat(Enum):
@@ -281,6 +281,10 @@ class NamedPrng:
                 for p in purposes:  # pylint: disable=invalid-name
                     self._engines[r][t][p] = numpy.random.Generator(
                         numpy.random.MT19937(self._seed_map(r, t, p)))
+
+    def clear_prngs(self):
+        """Erase the engines to free up space."""
+        self._engines = dict()
 
     def _exclude_ids(self,
                      arr: numpy.ndarray,

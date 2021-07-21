@@ -489,3 +489,27 @@ def test_compare_generate_3d_generate_it() -> None:
                                 id_filter)
         for i, _ in enumerate(real_range):
             assert (out1[i] == out2[i][time]).all()
+
+
+def test_erase() -> None:
+    """Test if deleting the engines removes the engines."""
+    mnprng = NamedPrng(mpurposes, mparticles)
+    mnprng.init_prngs(0)
+    mnprng.generate(Distr.UNI, ("quarks", "random_walk"))
+
+    mnprng.clear_prngs()
+    assert isinstance(
+        mnprng._engines, dict)  # pylint: disable=protected-access
+    assert len(mnprng._engines) == 0  # pylint: disable=protected-access
+
+    with pytest.raises(IndexError):
+        mnprng.generate(Distr.UNI, ("quarks", "random_walk"))
+
+
+def test_seed_logic_get() -> None:
+    """Test if the two seed logic values are returned."""
+    mnprng = NamedPrng(mpurposes, mparticles)
+    assert (100, 10) == mnprng.get_seed_logic()
+
+    mnprng = NamedPrng(mpurposes, mparticles, seed_logic=(800, 3))
+    assert (800, 3) == mnprng.get_seed_logic()
