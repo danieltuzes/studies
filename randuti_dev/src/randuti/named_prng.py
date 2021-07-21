@@ -264,6 +264,7 @@ class NamedPrng:
         purposes : List[str], optional
             The list of purposes for which the engines need to be created and
             initialized, within the given realizations and ptypes.
+
         """
         if ptypes is None:
             ptypes = self._particles
@@ -356,12 +357,21 @@ class NamedPrng:
                 distribution with a mean 0 and std 1
             - or a tuple of  Distr.STN, (mean, std), e.g.
                 (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
-        ptype : str
-            For which particle type should the engine generate random numbers
-        purpose : str
-            For what purpose would you like to generate the random numbers.
-            For different purpose, you get different set of random numbers,
-            and prng instances are independent purpose-wise.
+
+        seed_args: Tuple[str, str, Union[int, Iterable]]
+            The list of [ptype, purpose, realizations], the values that affect
+            the seed value. Realizations is optional, it can be omitted.
+
+            - ptype : str
+              For which particle type should the engine generate random numbers
+            - purpose : str
+              For what purpose would you like to generate the random numbers.
+              For different purpose, you get different set of random numbers,
+              and prng instances are independent purpose-wise.
+            - realizations : Union[int, Iterable]
+              A single int or any iterable. Can be none, if there is only 1
+              realization initialized.
+
         id_filter : Tuple[Iterable,"FStrat"], optional
             Filters random numbers for a specific set of particles if particles
             were created with unique name and order number.
@@ -469,6 +479,7 @@ class NamedPrng:
             The filtered prns.
         row : numpy.ndarray
             The full list of prns.
+
         """
         if self._teefile is not None:
             if self._only_used:
