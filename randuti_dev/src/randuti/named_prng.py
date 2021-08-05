@@ -9,7 +9,7 @@ import pickle
 from typing import Dict, Iterable, Tuple, List, Union
 import numpy
 
-__version__ = "0.0.1"  # single source of truth
+__version__ = "1.2.0"  # single source of truth
 
 
 class FStrat(Enum):
@@ -31,7 +31,7 @@ class NamedPrng:
     """Creates pseudo random numbers for entity types and purposes.
 
     Stores multiple prng instances and a seed-assignment logic for different
-    entity types, purposes and realizations for Monte Carlo simulations.
+    realizations, entity types and purposes for Monte Carlo simulations.
     Entities can be physical, biological, financial or any type of entities and
     they are called particles throughout this class.
 
@@ -70,8 +70,9 @@ class NamedPrng:
         different purposes, it is more economical memory-wise to store
         he set of particles in _particles only once and store the
         set of possible purposes in a separate dictionary.
-    _engines: Dict[str, numpy.random.Generator]
-        The prng instances of type Mersenne Twister. Seeds are generated
+    _engines: Dict[int, Dict[str, Dict[str, numpy.random.Generator]]]
+        _engines[realization][ptype][purpose] store the prng instance of the
+        corresponding Mersenne Twister. Seeds are generated
         with _seed_map based on the realization, particle type and purpose.
     _teefile: BinaryIO
         If set, all random numbers generated are copied to this file.
@@ -83,19 +84,30 @@ class NamedPrng:
         the user's responsibility to make sure the file has enough random
         numbers and that these numbers have the required properties.
     _only_used: bool
-            Modifies which numbers are written into _teefile or
-            read from _sourcefile.
+        Modifies which numbers are written into _teefile or
+        read from _sourcefile.
 
-            - If set to False or None, and _teefile is used, all random
-            numbers that are generated, are written into the file, even
-            if they are filtered out. When _sourcefile is used, even
-            those,which need to be filtered out, will be still read in,
-            and filtered out later.
-            - If set to True, and _teefile is used, only non-filtered
-            random numbers will be written into _teefile.
-            If _sourcefile is used, only the necessary random numbers
-            will be read in.
-
+        - If set to False or None, and _teefile is used, all random
+        numbers that are generated, are written into the file, even
+        if they are filtered out. When _sourcefile is used, even
+        those,which need to be filtered out, will be still read in,
+        and filtered out later.
+        - If set to True, and _teefile is used, only non-filtered
+        random numbers will be written into _teefile.
+        If _sourcefile is used, only the necessary random numbers
+        will be read in.
+    _shift_seed: int = 0
+        For debugging purposes, add this value to seed when
+        calculating the seed value. With this
+        technique, one can directly and manually modify the seed value,
+        which can be useful for debugging purposes. Although this attribute
+        is private, modify it by direct access and assignment directly.
+    _shift_realization: int = 0
+        For debugging purposes, add this value to the realization when
+        calculating the seed value. With this
+        technique, one can directly and manually modify the seed value,
+        which can be useful for debugging purposes. Although this attribute
+        is private, modify it by direct access and assignment directly.
     """
 
     def __init__(self,
@@ -119,7 +131,9 @@ class NamedPrng:
                          Dict[str, int]] = "dict_of_particles.pickle"
             Create the physical, financial or whatever related entities
             (particles) that will be assigned random numbers to,
-            together with their entity type (particle type).
+            together with their entity type (particle type). Does not create an
+            explicit copy if a dict is provided: if the given dict is modified
+            it affects this object too.
 
             - Dict[str, Dict[str, int]]: each key is the name of
               the particle type, each value as a dict stores the particles. A
@@ -217,6 +231,9 @@ class NamedPrng:
         else:
             self._only_used = False
 
+        self._shift_seed = 0
+        self._shift_realization = 0
+
     def _chk_seed_limits(self):
         """Check if unique seed for each ptype and purpose can be ensured."""
         if len(self._particles) > self._seed_logic[1] or \
@@ -232,34 +249,57 @@ class NamedPrng:
     def _seed_map(self, realization: int, ptype: str, purpose: str) -> int:
         """Assign a seed to a realization and particle type."""
         ptype_order = list(self._particles.keys()).index(ptype)
-        seed = (realization * self._seed_logic[0] +
+        seed = ((realization + self._shift_realization) * self._seed_logic[0] +
                 self._purposes.index(purpose) * self._seed_logic[1] +
-                ptype_order)
+                ptype_order + self._shift_seed)
         return seed
 
     def init_prngs(self,
-                   realization_id: int,
+                   realizations: Union[int, Iterable],
                    ptypes: List[str] = None,
                    purposes: List[str] = None) -> None:
         """Initialize prngs for a given setup.
 
-        Modifies the state of the prngs based on the realization_id,
+        Modifies the state of the prngs based on the realizations,
         and for all or a given list of ptypes
         and for all or a given list of purposes.
-        If the purposes list is None, all possibilities are initialized.
+        If the ptypes is None, prngs for all ptypes are initialized.
+        If the purposes is None, prngs for all purposes are initialized.
+
+        Parameters
+        ----------
+        realizations : Union[int, Iterable]
+            A single int or any iterable (e.g. a list or a range) that tells
+            for which realization ids should the engines be created and
+            initialized.
+        ptypes : List[str], optional
+            The list of particles for which the engines need to be created and
+            initialized, within the given realizations.
+        purposes : List[str], optional
+            The list of purposes for which the engines need to be created and
+            initialized, within the given realizations and ptypes.
+
         """
         if ptypes is None:
-            ptypes = self._particles.keys()
+            ptypes = self._particles
         if purposes is None:
             purposes = self._purposes
 
-        for ptype in ptypes:
-            self._engines[ptype] = dict()
-            for purpose in purposes:
-                self._engines[ptype][purpose] = numpy.random.Generator(
-                    numpy.random.MT19937(self._seed_map(realization_id,
-                                                        ptype,
-                                                        purpose)))
+        if isinstance(realizations, int):
+            realizations = [realizations]
+
+        self._engines = dict()
+        for r in realizations:  # pylint: disable=invalid-name
+            self._engines[r] = dict()
+            for t in ptypes:  # pylint: disable=invalid-name
+                self._engines[r][t] = dict()
+                for p in purposes:  # pylint: disable=invalid-name
+                    self._engines[r][t][p] = numpy.random.Generator(
+                        numpy.random.MT19937(self._seed_map(r, t, p)))
+
+    def clear_prngs(self):
+        """Erase the engines to free up space."""
+        self._engines = dict()
 
     def _exclude_ids(self,
                      arr: numpy.ndarray,
@@ -308,9 +348,8 @@ class NamedPrng:
 
     def generate(self,
                  rnd_type: Union["Distr", Tuple["Distr", Tuple[float, float]]],
-                 ptype: str,
-                 purpose: str,
-                 id_filter: Tuple[Iterable, "FStrat"] = (None, None)
+                 seed_args: Tuple[str, str, Union[int, Iterable]],
+                 id_filter: Tuple[Iterable, "FStrat"] = (None, None),
                  ) -> numpy.ndarray:
         """Generate random numbers using the initialized PRNGs.
 
@@ -332,13 +371,22 @@ class NamedPrng:
                 distribution with a mean 0 and std 1
             - or a tuple of  Distr.STN, (mean, std), e.g.
                 (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
-        ptype : str
-            For which particle type should the engine generate random numbers
-        purpose : str
-            For what purpose would you like to generate the random numbers.
-            For different purpose, you get different set of random numbers,
-            and prng instances are independent purpose-wise.
-        id_filter : Tuple[Iterable,, optional
+
+        seed_args: Tuple[str, str, Union[int, Iterable]]
+            The list of [ptype, purpose, realizations], the values that affect
+            the seed value. Realizations is optional, it can be omitted.
+
+            - ptype : str
+              For which particle type should the engine generate random numbers
+            - purpose : str
+              For what purpose would you like to generate the random numbers.
+              For different purpose, you get different set of random numbers,
+              and prng instances are independent purpose-wise.
+            - realizations : Union[int, Iterable]
+              A single int or any iterable. Can be none, if there is only 1
+              realization initialized.
+
+        id_filter : Tuple[Iterable,"FStrat"], optional
             Filters random numbers for a specific set of particles if particles
             were created with unique name and order number.
 
@@ -349,13 +397,19 @@ class NamedPrng:
             particles the random numbers should be omitted from the return
             value. The order number of the random numbers are read from the
             value of the correcponding ID key of the particles.
+        realizations : Union[int, Iterable] = None
+            A single int or any iterable (e.g. a list or a range) that tells
+            for which realization ids should the engines be created and
+            initialized. If no or None value is provided then random
+            numbers corresponding to the one and only realization is returned.
 
         Returns
         -------
         numpy.ndarray:
-            shape(number of realizations, number of particles)
-            It has as many rows as many realization_id are in the range of
-            [realization_id_start, realization_id_end),
+            If len(realizations)=1, a 1D array is returned, but if
+            len(realizations)>1, then a 2D array is returned with
+            shape = (number of realizations, number of particles)
+            It has as many rows as the length of realizations,
             and it has as many columns as many particles with type ptype
             can be found, and it has dtype = numpy.float64.
 
@@ -369,41 +423,83 @@ class NamedPrng:
             and does not modify the state of the prng instance.
 
         """
-        amount = self._getamount(ptype)
-        ret = numpy.ndarray(amount, dtype=numpy.float64)
+        ptype = seed_args[0]
+        purpose = seed_args[1]
 
-        if self._sourcefile is None:
-            if isinstance(rnd_type, Distr) and rnd_type == Distr.UNI:
-                ret = self._engines[ptype][purpose].random(size=amount)
-            elif isinstance(rnd_type, Distr) and rnd_type == Distr.STN:
-                ret = self._engines[ptype][purpose].normal(size=amount)
-            elif isinstance(rnd_type, tuple) and rnd_type[0] == Distr.STN:
-                ret = self._engines[ptype][purpose].normal(
-                    loc=rnd_type[1][0], scale=rnd_type[1][1], size=amount)
-            else:
-                raise NotImplementedError(f"Unsupported rnd_type {rnd_type}")
+        if len(seed_args) == 2 or not hasattr(seed_args[2], "__len__"):
+            realizations = [[*self._engines][0]]
         else:
-            if self._only_used:
-                if id_filter[1] == FStrat.EXC:
-                    amount -= len(id_filter[0])
-                elif id_filter[1] == FStrat.INC:
-                    amount = len(id_filter[0])
-            ret = numpy.fromfile(
-                self._sourcefile, dtype=numpy.float64, count=amount)
-        # random numbers are already read in or generated
+            realizations = seed_args[2]
 
-        # if tee is requested for every random numbers
-        if not self._only_used:
-            ret = self._tee(ret)
+        nof_r = len(realizations)
 
-        # filter them if requested and not read in with _only_used
-        ret = self._filter_ids(id_filter, ret, ptype)
+        n_id, cols = self._get_amounts(ptype, id_filter)
 
-        # if tee is requested only for filtered numbers
-        if self._only_used:
-            ret = self._tee(ret)  # copy the random numbers if needed
+        ret = numpy.empty((nof_r, cols), dtype=numpy.float64)
+
+        for i, r in enumerate(realizations):  # pylint: disable=invalid-name
+            if self._sourcefile is None:
+                if isinstance(rnd_type, Distr) and rnd_type == Distr.UNI:
+                    row = self._engines[r][ptype][purpose].random(size=n_id)
+                elif isinstance(rnd_type, Distr) and rnd_type == Distr.STN:
+                    row = self._engines[r][ptype][purpose].normal(size=n_id)
+                elif isinstance(rnd_type, tuple) and rnd_type[0] == Distr.STN:
+                    row = self._engines[r][ptype][purpose].normal(
+                        loc=rnd_type[1][0],
+                        scale=rnd_type[1][1],
+                        size=n_id)
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported rnd_type {rnd_type}")
+            else:
+                if self._only_used:
+                    row = numpy.fromfile(
+                        self._sourcefile, dtype=numpy.float64, count=cols)
+                else:
+                    row = numpy.fromfile(
+                        self._sourcefile, dtype=numpy.float64, count=n_id)
+
+            # random numbers are already read in or generated
+
+            # filter them if requested and not read in with _only_used
+            ret[i] = self._filter_ids(id_filter, row, ptype)
+
+            self._print_to_file(ret[i], row)
+
+        if nof_r == 1:
+            return ret[0]
 
         return ret
+
+    def _get_amounts(self,
+                     ptype: str,
+                     id_filter: Tuple[Iterable, "FStrat"]) -> Tuple[int, int]:
+        """Tell how many prns are needed and how many are be stored."""
+        n_id = self._get_amount(ptype)  # number of IDs within that type
+        cols = n_id
+        if id_filter[1] == FStrat.EXC:
+            cols = n_id - len(id_filter[0])
+        elif id_filter[1] == FStrat.INC:
+            cols = len(id_filter[0])
+
+        return n_id, cols
+
+    def _print_to_file(self, ret: numpy.ndarray, row: numpy.ndarray) -> None:
+        """Decides if, where and what prns to print to file.
+
+        Parameters
+        ----------
+        ret : numpy.ndarray
+            The filtered prns.
+        row : numpy.ndarray
+            The full list of prns.
+
+        """
+        if self._teefile is not None:
+            if self._only_used:
+                ret.tofile(self._teefile)
+            else:
+                row.tofile(self._teefile)
 
     def generate_it(self,
                     rnd_type: Union["Distr",
@@ -455,8 +551,8 @@ class NamedPrng:
         -------
         numpy.ndarray:
             shape(number of realizations, number of particles)
-            It has as many rows as many realization_id are in the range of
-            [realization_id_start, realization_id_end),
+            It has as many rows as the length of the 3rd item in seed_args,
+            that is the iterable that tells the realization ids,
             and it has as many columns as many particles with type ptype
             can be found, and it has dtype = numpy.float64.
 
@@ -549,7 +645,7 @@ class NamedPrng:
         """
         ptype, purpose, realizations = seed_args
 
-        sbs_amount = self._getamount(ptype)  # the amount for the subset
+        sbs_amount = self._get_amount(ptype)  # the amount for the subset
         if id_filter[1] == FStrat.EXC:
             sbs_amount -= len(id_filter[0])
         elif id_filter[1] == FStrat.INC:
@@ -565,25 +661,18 @@ class NamedPrng:
             for time in range(0, int(time_range[1])):
                 if time < int(time_range[0]):
                     # no need to filter, it takes time
-                    ret_col = self.generate(rnd_type, ptype, purpose)
+                    ret_col = self.generate(rnd_type, [ptype, purpose])
                     # no need to save the random numbers
                 else:
                     t_count = time - time_range[0]
                     ret_col = self.generate(rnd_type,
-                                            ptype,
-                                            purpose,
+                                            [ptype, purpose],
                                             id_filter)
                     ret[r_count][t_count] = ret_col
 
         return ret
 
-    def _tee(self, arr: numpy.ndarray) -> numpy.ndarray:
-        """Copy arr to _teefile if exists and returns the array."""
-        if self._teefile is not None:
-            arr.tofile(self._teefile)
-        return arr
-
-    def _getamount(self, ptype: str) -> int:
+    def _get_amount(self, ptype: str) -> int:
         """Tell how many particles exist with in one ptype."""
         if isinstance(self._particles[ptype], int):
             return self._particles[ptype]
