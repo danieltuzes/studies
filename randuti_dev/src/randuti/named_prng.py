@@ -9,7 +9,8 @@ import pickle
 from typing import Dict, Iterable, Tuple, List, Union
 import numpy
 
-__version__ = "1.2.0"  # single source of truth
+__version__ = "1.2.1"  # single source of truth
+
 
 class FStrat(Enum):
     """Filtering strategy: include or exclude."""
@@ -36,8 +37,8 @@ class NamedPrng:
 
     Attributes
     ----------
-    _seed_logic: Tuple[int,int]
-        Consists of (_n_max, _n_ptl).
+    _seed_logic: Tuple[int,int,int,int]
+        Consists of (_n_max, _n_ptl,_seed_shift,_realization_shift).
         Choose these values as large as you will later.
         Modifying these values may break seed order and therefore makes it
         impossible to compare the simulations with previous ones elementwise.
@@ -57,6 +58,21 @@ class NamedPrng:
           possibility with older runs. From one purpose to another,
           for the same particle type, seed value jumps with this value.
           number of particle types * _n_ptl =< _n_max must hold.
+
+        - _seed_shift: int = 0
+
+          For debugging purposes, add this value to seed when
+          calculating the seed value. With this
+          technique, one can directly and manually modify the seed value,
+          which can be useful for debugging purposes. Although this attribute
+          is private, modify it by direct access and assignment directly.
+
+        - _realization_shift: int = 0
+          For debugging purposes, add this value to the realization when
+          calculating the seed value. With this
+          technique, one can directly and manually modify the seed value,
+          which can be useful for debugging purposes. Although this attribute
+          is private, modify it by direct access and assignment directly.
 
     _particles: Dict[str,Dict[str,int]]
         stores the name of different particle types as key,
@@ -95,18 +111,7 @@ class NamedPrng:
         random numbers will be written into _teefile.
         If _sourcefile is used, only the necessary random numbers
         will be read in.
-    _shift_seed: int = 0
-        For debugging purposes, add this value to seed when
-        calculating the seed value. With this
-        technique, one can directly and manually modify the seed value,
-        which can be useful for debugging purposes. Although this attribute
-        is private, modify it by direct access and assignment directly.
-    _shift_realization: int = 0
-        For debugging purposes, add this value to the realization when
-        calculating the seed value. With this
-        technique, one can directly and manually modify the seed value,
-        which can be useful for debugging purposes. Although this attribute
-        is private, modify it by direct access and assignment directly.
+
     """
 
     def __init__(self,
@@ -115,7 +120,7 @@ class NamedPrng:
                                   Dict[str, Dict[str, int]],
                                   Dict[str, int]] = "dict_of_particles.pickle",
                  exim_settings: Tuple[str, str, bool] = (None, None, None),
-                 seed_logic: Tuple[int, int] = (100, 10)
+                 seed_logic: Tuple[int, int] = (100, 10, 0, 0)
                  ) -> None:
         """Initialize the a class instance.
 
@@ -166,9 +171,15 @@ class NamedPrng:
                 If _sourcefile is used, only the necessary random numbers
                 will be read in.
 
-        seed_logic: (_n_max, _n_ptl)
-            Set the value of the maximum number of particle type - purpose
-            combination and the value of the maximum number of particle types.
+        seed_logic: (_n_max, _n_ptl, _seed_shift, _realization_shift)
+            Set the
+
+            - value of the maximum number of particle type - purpose
+            combination,
+            - the value of the maximum number of particle types.
+            - the value of constant seed shift
+            - the value of constant realization shift.
+
             Read more in the docstring of the class.
 
         Raises
@@ -230,9 +241,6 @@ class NamedPrng:
         else:
             self._only_used = False
 
-        self._shift_seed = 0
-        self._shift_realization = 0
-
     def _chk_seed_limits(self):
         """Check if unique seed for each ptype and purpose can be ensured."""
         if len(self._particles) > self._seed_logic[1] or \
@@ -248,9 +256,15 @@ class NamedPrng:
     def _seed_map(self, realization: int, ptype: str, purpose: str) -> int:
         """Assign a seed to a realization and particle type."""
         ptype_order = list(self._particles.keys()).index(ptype)
-        seed = ((realization + self._shift_realization) * self._seed_logic[0] +
-                self._purposes.index(purpose) * self._seed_logic[1] +
-                ptype_order + self._shift_seed)
+
+        n_max = self._seed_logic[0]
+        n_ptl = self._seed_logic[1]
+        shift_seed = self._seed_logic[2]
+        shift_realization = self._seed_logic[3]
+
+        seed = ((realization + shift_realization) * n_max +
+                self._purposes.index(purpose) * n_ptl +
+                ptype_order + shift_seed)
         return seed
 
     def init_prngs(self,
