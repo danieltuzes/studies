@@ -11,7 +11,6 @@ import numpy
 
 __version__ = "1.2.0"  # single source of truth
 
-
 class FStrat(Enum):
     """Filtering strategy: include or exclude."""
 
@@ -458,14 +457,12 @@ class NamedPrng:
                 else:
                     row = numpy.fromfile(
                         self._sourcefile, dtype=numpy.float64, count=n_id)
-
             # random numbers are already read in or generated
 
             # filter them if requested and not read in with _only_used
             ret[i] = self._filter_ids(id_filter, row, ptype)
 
             self._print_to_file(ret[i], row)
-
         if nof_r == 1:
             return ret[0]
 
