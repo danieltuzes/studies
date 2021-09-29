@@ -62,7 +62,7 @@ LENGTH3B = 50        # the uniqueness of the last LENGTH3b numbers
 
 PWR4 = 22            # The length of random numbers
 
-TC = {4}  # test cases, can be 1, 2, 3, 4 or any combination of them
+TC = {3}  # test cases, can be 1, 2, 3, 4 or any combination of them
 
 if __name__ == "__main__":
 
@@ -116,12 +116,14 @@ if __name__ == "__main__":
 
         UNIQUE = True
         for i in range(LENGTH3B):
-            UNIQUE &= numpy.where(A == A[i])[0][0] == i
+            equals = numpy.where(A == A[i])
+            UNIQUE &= (len(equals) == 1) & (equals[0][0] == i)
 
         for i in range(LENGTH3-1, LENGTH3 - LENGTH3B, -1):
-            UNIQUE &= numpy.where(A == A[i])[0][0] == i
+            equals = numpy.where(A == A[i])
+            UNIQUE &= (len(equals) == 1) & (equals[0][0] == i)
 
-        print("The first and last", LENGTH3B,
+        print("The first and last ", LENGTH3B,
               "elements are all unique:", UNIQUE, sep=" ")
 
     if 4 in TC:  # Test 4
