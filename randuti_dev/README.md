@@ -2,29 +2,30 @@
 
 Random number utilities package that contains the `named_prng` module only.
 
-- [Details of the model](#details-of-the-model)
-- [Implementation of the prng container](#implementation-of-the-prng-container)
-  - [The dictionary of dictionary containing the particle IDs](#the-dictionary-of-dictionary-containing-the-particle-ids)
-  - [tee: copy the stream of random numbers to a file](#tee-copy-the-stream-of-random-numbers-to-a-file)
+- [randuti](#randuti)
+  - [Usage](#usage)
+  - [The structure design of the Monte Carlo simulation](#the-structure-design-of-the-monte-carlo-simulation)
+  - [Implementation of the prng container](#implementation-of-the-prng-container)
+    - [The dictionary of dictionary containing the particle IDs](#the-dictionary-of-dictionary-containing-the-particle-ids)
+    - [tee: copy the stream of random numbers to a file](#tee-copy-the-stream-of-random-numbers-to-a-file)
 
-In one of my professional tasks, I had to implement a prng container for Monte Carlo simulations. The purpose of this container is to improve prn generation by supporting multiple seeds, and instead of seeds, to support named seeds.
+Many Monte Carlo simulations share similar patterns in their design. Although one can assign pseudo random numbers (prns) from arbitrarily initialized and used prn generators (prngs) to the different realizations, entities and to their different properties, to be efficient with the prn generation and be sparing with the seeds (also to save initialization time), some good design ideas need to be followed. This library offers one possibility that is believed to help to achieve these goals.
 
-- The first step is to print out all the random numbers used by the model, which produced the result A, store them in a file,
-- and then use this super container to feed the model with the same numbers. This time I should get the same result A.
-- Then the file-based random number feed has to replaced by a prng algorithm, like Mersenne Twister. This time the model should produce different result B. I can write out the random numbers again, into a file, and use the file instead of the algorithm producing the same B result. So we can see how changing the random number engine from a basic math algorithm to file-based solution keeps the same result A.
-- Then we change the random numbers, and get result B, but the result remains the same if we change the source of random numbers from a file to a math algorithm again.
+## Usage
 
-## Details of the model
+This library implements a python API interface only, i.e. it has to be imported into python and the relevant function calls have to be called. The python source code contains detailed docstrings from which a documentation with sphinx is generated. Please browse the documentation for further details.
 
-In these simulations, there is no nondeterministic time evolution, the prng is used to initialize the state only. The system consists of $N$ different types of particle, and each particle has a unique name.
+## The structure design of the Monte Carlo simulation
 
-To initialize the state of the system, we assign a random number from a Gaussian distribution to each particle. The system is then being evolved and a property $P$ is evaluated. Starting from different initial states, we get different $P$ results, $\left\{ {{P_1},{P_2}, \ldots ,{P_L}} \right\}$, and this set is further evaluated,
+The investigated system is started from an initial state and developed in time according to the rules of the system, which can be nondeterministic, e.g. random-walk. At one or more later points, some properties $A_1, A_2, \ldots, A_n$ of the system is analyzed and exported. The behavior of the system from the beginning till the last investigated point is called a realization. In a new realization, the system is set back to the initial condition, which can be the same or different than the previous initial state, and the system is evolved again, properties are analyzed and exported if necessary. After performing $N$ realizations, the statistical properties of $A_i$ are analyzed. The different realizations are independent from each other and one CPU core should be responsible to execute only 1 at a time.
 
-$${\Pi _L} = f\left( {\left\{ {{P_1},{P_2}, \ldots ,{P_L}} \right\}} \right)$$
+Depending on the nature of the initial conditions, evolving equations and properties investigated, according to the design principle of this library, one must group the entities within this simulations.
+  > The entities are also called particles using the analogy with physics. These particles can be gas particles if an ideal gas is simulated, where gas particles do random walk in the volume available for them.
 
-During the run of the model, $L$ increases, ${\Pi _L}$ evolves and is being monitored, and once it meets a requirement, some $P_i$ values, $\{ {P_i}\quad i \in I\} $ for an index set $I$ must be evaluated. Instead of storing all the details of the particles throughout the evolution of $\Pi_L$, we just identify $I$ and recreate the systems corresponding to each element of $I$.
+A group of entity must also share the same level and kind of statistical freedom, i.e. how many of its properties requires random number assignment and how often. The properties representing the different stochastic freedoms are called purpose.
+  > Using the ideal gas analogy, let's suppose it is a mixture of He gas with different isotopes, $^4He$ and $^6He$. The first is stable but the latter is radioactive with a half life of $~1s$. The particles of $^4He$ form a group of particles, which do random walk only, but the group of $^6He$ particles do radioactive decay too. $^4He$ has 1 statistical freedom, where the latter has 2, therefore they form 2 different groups. In this example, the 2 purposes may be called "random walk" and "radioactive decay".
 
-We are also interested how systems with different number of particles of type $n_i$ affects the evolution of $\Pi_L$.
+When this library is used, the user need to define the group of particles (or at least their number) and the list of purposes. For every realization, particle group and purpose, a unique seed and a dedicated prng engine can be assigned. In each random number generation steps (for a realization, particle group and purpose) as many random numbers are generated as many particles can be found within that particle group. Then the user can assign these random numbers to each particles. A filtering logic (after generation) can be also applied if only a subset of the particles needs random numbers.
 
 ## Implementation of the prng container
 
