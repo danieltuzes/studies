@@ -9,7 +9,7 @@ import pickle
 from typing import Dict, Iterable, Tuple, List, Union
 import numpy
 
-__version__ = "1.2.1"  # single source of truth
+__version__ = "1.2.2"  # single source of truth
 
 
 class FStrat(Enum):
@@ -103,14 +103,14 @@ class NamedPrng:
         read from _sourcefile.
 
         - If set to False or None, and _teefile is used, all random
-        numbers that are generated, are written into the file, even
-        if they are filtered out. When _sourcefile is used, even
-        those,which need to be filtered out, will be still read in,
-        and filtered out later.
+          numbers that are generated, are written into the file, even
+          if they are filtered out. When _sourcefile is used, even
+          those,which need to be filtered out, will be still read in,
+          and filtered out later.
         - If set to True, and _teefile is used, only non-filtered
-        random numbers will be written into _teefile.
-        If _sourcefile is used, only the necessary random numbers
-        will be read in.
+          random numbers will be written into _teefile.
+          If _sourcefile is used, only the necessary random numbers
+          will be read in.
 
     """
 
@@ -377,11 +377,11 @@ class NamedPrng:
             The distribution type of the random numbers.
 
             - can be an enum Distr.UNI, which defines the uniform
-                distribution on[0, 1)
+              distribution on[0, 1)
             - or an enum Distr.STN, which defines a standard normal
-                distribution with a mean 0 and std 1
+              distribution with a mean 0 and std 1
             - or a tuple of  Distr.STN, (mean, std), e.g.
-                (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
+              (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
 
         seed_args: Tuple[str, str, Union[int, Iterable]]
             The list of [ptype, purpose, realizations], the values that affect
@@ -402,12 +402,12 @@ class NamedPrng:
             were created with unique name and order number.
 
             - if filtering strategy is FStrat.INC or None,
-            ids tells which particles
-            IDs should be used for the random number generation.
+              ids tells which particles
+              IDs should be used for the random number generation.
             - If filtering strategy is FStrat.EXC, then ids tells for which
-            particles the random numbers should be omitted from the return
-            value. The order number of the random numbers are read from the
-            value of the correcponding ID key of the particles.
+              particles the random numbers should be omitted from the return
+              value. The order number of the random numbers are read from the
+              value of the correcponding ID key of the particles.
         realizations : Union[int, Iterable] = None
             A single int or any iterable (e.g. a list or a range) that tells
             for which realization ids should the engines be created and
@@ -532,11 +532,11 @@ class NamedPrng:
             The distribution type of the random numbers.
 
             - can be an enum Distr.UNI, which defines the uniform
-                distribution on[0, 1)
+              distribution on[0, 1)
             - or an enum Distr.STN, which defines a standard normal
-                distribution with a mean 0 and std 1
+              distribution with a mean 0 and std 1
             - or a tuple of  Distr.STN, (mean, std), e.g.
-                (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
+              (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
         seed_args: (ptype, purpose, iterable(realization ids))
             Values that affect the seeds. seed_args[2] can be an iterable
             range, like range(min_id, max_id) or a list of ids.
@@ -545,12 +545,12 @@ class NamedPrng:
             were created with unique name and order number.
 
             - if filtering strategy is FStrat.INC or None,
-            ids tells which particles
-            IDs should be used for the random number generation.
+              ids tells which particles
+              IDs should be used for the random number generation.
             - If filtering strategy is FStrat.EXC, then ids tells for which
-            particles the random numbers should be omitted from the return
-            value. The order number of the random numbers are read from the
-            value of the correcponding ID key of the particles.
+              particles the random numbers should be omitted from the return
+              value. The order number of the random numbers are read from the
+              value of the correcponding ID key of the particles.
         params: (loc, scale) = (0, 1)
             The parameters passed to numpy's normal function,
             i.e. the loc and scale paramters defining the
@@ -602,11 +602,11 @@ class NamedPrng:
             The distribution type of the random numbers.
 
             - can be an enum Distr.UNI, which defines the uniform
-                distribution on[0, 1)
+              distribution on[0, 1)
             - or an enum Distr.STN, which defines a standard normal
-                distribution with a mean 0 and std 1
+              distribution with a mean 0 and std 1
             - or a tuple of  Distr.STN, (mean, std), e.g.
-                (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
+              (Distr.STN, (1, 3)) for a mean = 1 and std = 3.
 
         seed_args: (ptype, purpose, iterable(realization ids))
             Values that affect the seeds. seed_args[2] can be an iterable
@@ -619,12 +619,13 @@ class NamedPrng:
             were created with unique name and order number.
 
             - if filtering strategy is FStrat.INC or None,
-            ids tells which particles
-            IDs should be used for the random number generation.
+              ids tells which particles
+              IDs should be used for the random number generation.
             - If filtering strategy is FStrat.EXC, then ids tells for which
-            particles the random numbers should be omitted from the return
-            value. The order number of the random numbers are read from the
-            value of the correcponding ID key of the particles.
+              particles the random numbers should be omitted from the return
+              value. The order number of the random numbers are read from the
+              value of the correcponding ID key of the particles.
+
         params: (loc, scale) = (0, 1)
             The parameters passed to numpy's normal function,
             i.e. the loc and scale paramters defining the
@@ -636,6 +637,7 @@ class NamedPrng:
             shape(number of realizations,
                   number of time steps,
                   number of particles)
+
             It has as many blocks as many realization_id are in the range of
             [realization_id_start, realization_id_end),
             as many rows as many times steps,
