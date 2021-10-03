@@ -202,8 +202,7 @@ class NamedPrng:
             self._teefile = None
         else:
             try:
-                self._teefile = open(  # pylint: disable=consider-using-with
-                    teefilename, "ab")
+                self._teefile = open(teefilename, "ab")
 
                 # self._teefile will live after the try is executed
                 # `with` would free up the resource
@@ -223,8 +222,7 @@ class NamedPrng:
             self._sourcefile = None
         else:
             try:
-                self._sourcefile = open(  # pylint: disable=consider-using-with
-                    sourcefilename, "rb")
+                self._sourcefile = open(sourcefilename, "rb")
             except OSError as err:
                 self._sourcefile = None
                 note = ("Cannot initialize a NamedPrng instance,",
