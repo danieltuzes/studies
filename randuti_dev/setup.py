@@ -1,7 +1,7 @@
 """setup.py
 Install the randuti package to run the test and example codes.
 
-cd into `studies\namedPrng` and issue
+cd into `randuti_dev` and issue
 
 ```batch
 pip install -e .
@@ -28,9 +28,6 @@ pip uninstall randuti
 ```
 """
 
-from setuptools import setup, find_packages
+import setuptools
 
-setup(name="randuti",
-      packages=find_packages('src'),
-      package_dir={'': 'src/randuti'},
-      version="0.1")
+setuptools.setup()
