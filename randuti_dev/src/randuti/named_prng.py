@@ -120,7 +120,7 @@ class NamedPrng:
                                   Dict[str, Dict[str, int]],
                                   Dict[str, int]] = "dict_of_particles.pickle",
                  exim_settings: Tuple[str, str, bool] = (None, None, None),
-                 seed_logic: Tuple[int, int] = (100, 10, 0, 0)
+                 seed_logic: Tuple[int, int, int, int] = (100, 10, 0, 0)
                  ) -> None:
         """Initialize the a class instance.
 
@@ -189,7 +189,10 @@ class NamedPrng:
             if sourcefilename cannot be opened for binary read.
 
         """
-        self._seed_logic = seed_logic
+        self._seed_logic = (seed_logic[0],
+                            seed_logic[1],
+                            seed_logic[2],
+                            seed_logic[3])
 
         self._particles = _constr_particles(particles)
         self._purposes = purposes
@@ -708,15 +711,21 @@ class NamedPrng:
                     + "because an OSError occurred:")
             raise OSError(note) from err
 
-    def get_seed_logic(self) -> Tuple[int, int]:
+    def get_seed_logic(self) -> Tuple[int, int, int, int]:
         """Get the parameters defining the seed logic.
 
         Returns
         -------
-        Tuple[int,int]:
-            The (_n_max,_n_ptl) tuple telling the maximum number of
-            particle type - purpose combination and the
-            the maximum number of particle types.
+        Tuple[int, int, int, int]:
+            The (_n_max, _n_ptl, _seed_shift, _realization_shift)
+            tuple telling the
+            - maximum number of particle type - purpose combination,
+            - the maximum number of particle types
+            - a constant shift added to the seed (if value x is assigned,
+              the new seed will be the old seed value + x)
+            - a constant realization id shift (if value x is assigned,
+              then the realization identified by y will be modified
+              in the seed calculation, and the value y+x will be used)
 
         """
         return self._seed_logic

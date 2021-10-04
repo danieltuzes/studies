@@ -513,7 +513,7 @@ def test_erase() -> None:
 def test_seed_logic_get() -> None:
     """Test if the two seed logic values are returned."""
     mnprng = NamedPrng(mpurposes, mparticles)
-    assert (100, 10) == mnprng.get_seed_logic()
+    assert (100, 10, 0, 0) == mnprng.get_seed_logic()
 
-    mnprng = NamedPrng(mpurposes, mparticles, seed_logic=(800, 3))
-    assert (800, 3) == mnprng.get_seed_logic()
+    mnprng = NamedPrng(mpurposes, mparticles, seed_logic=(800, 3, 1, 2))
+    assert (800, 3, 1, 2) == mnprng.get_seed_logic()
