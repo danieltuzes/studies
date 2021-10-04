@@ -202,7 +202,8 @@ class NamedPrng:
             self._teefile = None
         else:
             try:
-                self._teefile = open(teefilename, "ab")
+                self._teefile = open(  # pylint: disable=consider-using-with
+                    teefilename, "ab")
 
                 # self._teefile will live after the try is executed
                 # `with` would free up the resource
@@ -222,7 +223,8 @@ class NamedPrng:
             self._sourcefile = None
         else:
             try:
-                self._sourcefile = open(sourcefilename, "rb")
+                self._sourcefile = open(  # pylint: disable=consider-using-with
+                    sourcefilename, "rb")
             except OSError as err:
                 self._sourcefile = None
                 note = ("Cannot initialize a NamedPrng instance,",
@@ -232,7 +234,7 @@ class NamedPrng:
                         "Error details:")
                 raise OSError(note) from err
 
-        self._engines = dict()   # the prng instances
+        self._engines = {}   # the prng instances
 
         if len(exim_settings) > 2 and exim_settings[2]:
             self._only_used = True
@@ -299,18 +301,18 @@ class NamedPrng:
         if isinstance(realizations, int):
             realizations = [realizations]
 
-        self._engines = dict()
+        self._engines = {}
         for r in realizations:  # pylint: disable=invalid-name
-            self._engines[r] = dict()
+            self._engines[r] = {}
             for t in ptypes:  # pylint: disable=invalid-name
-                self._engines[r][t] = dict()
+                self._engines[r][t] = {}
                 for p in purposes:  # pylint: disable=invalid-name
                     self._engines[r][t][p] = numpy.random.Generator(
                         numpy.random.MT19937(self._seed_map(r, t, p)))
 
     def clear_prngs(self):
         """Erase the engines to free up space."""
-        self._engines = dict()
+        self._engines = {}
 
     def _exclude_ids(self,
                      arr: numpy.ndarray,
