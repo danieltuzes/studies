@@ -13,7 +13,7 @@ For a more detailed test, check the ``test_named_prng.py``.
 """
 
 import os
-from named_prng import NamedPrng, FStrat, Distr
+from randuti import NamedPrng, FStrat, Distr
 
 # quarks is a particle type with 6 different IDs as keys
 # The order number will be important once we remove IDs.
@@ -63,7 +63,7 @@ def do_some_stuff(mnprng: NamedPrng) -> None:
             # generate random numbers for quarks
             mnprng.init_prngs(realization_id)
             random_for_quarks = mnprng.generate(
-                Distr.UNI, "quarks", purpose)
+                Distr.UNI, ("quarks", purpose))
 
             for (key, value), rnd in zip(quarks.items(), random_for_quarks):
                 print(key, value, rnd, sep="\t")
@@ -75,8 +75,7 @@ def do_some_stuff(mnprng: NamedPrng) -> None:
             mnprng.init_prngs(realization_id)    # reset the prngs
 
             random_for_quarks_subset = mnprng.generate(Distr.UNI,
-                                                       "quarks",
-                                                       purpose,
+                                                       ("quarks", purpose),
                                                        id_filter=(remove_quarks, FStrat.EXC))
 
             for (key, value), rnd in zip(quarks_subset.items(), random_for_quarks_subset):
@@ -89,8 +88,7 @@ def do_some_stuff(mnprng: NamedPrng) -> None:
             mnprng.init_prngs(realization_id)    # reset the prngs
 
             random_for_quarks_subset_in = mnprng.generate(Distr.UNI,
-                                                          "quarks",
-                                                          purpose,
+                                                          ("quarks", purpose),
                                                           id_filter=(quarks_subset, FStrat.INC))
 
             for (key, value), rnd in zip(quarks_subset.items(), random_for_quarks_subset_in):

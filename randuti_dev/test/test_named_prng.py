@@ -7,7 +7,7 @@ import os
 import filecmp
 import numpy
 import pytest
-from named_prng import NamedPrng, FStrat, Distr
+from randuti import NamedPrng, FStrat, Distr
 
 
 quarks = {"up": 0, "down": 1, "charm": 2, "strange": 3, "top": 4, "bottom": 5}
