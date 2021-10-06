@@ -258,11 +258,6 @@ def test_teefile() -> None:
     for only_used in [False, True]:
         for strategy in [FStrat.INC, FStrat.EXC]:
             tee_fname = "teefile_test_named_prng.dat"
-            if os.path.isfile(tee_fname):
-                os.remove(tee_fname)
-
-            if os.path.isfile("B"+tee_fname):
-                os.remove("B" + tee_fname)
 
             mnprng_save = NamedPrng(mpurposes, mparticles,
                                     exim_settings=(tee_fname, "", only_used))
@@ -292,15 +287,14 @@ def test_teefile() -> None:
                 seed_args,
                 id_filter=(remove_quarks, strategy))
 
-            assert arr_load_r == pytest.approx(arr_save_r)
-            assert arr_load_n == pytest.approx(arr_save_n)
             assert filecmp.cmp(tee_fname, "B" + tee_fname)
 
             del mnprng_load
-            if os.path.isfile(tee_fname):
-                os.remove(tee_fname)
-            if os.path.isfile("B"+tee_fname):
-                os.remove("B" + tee_fname)
+            os.remove(tee_fname)
+            os.remove("B" + tee_fname)
+
+            assert arr_load_r == pytest.approx(arr_save_r)
+            assert arr_load_n == pytest.approx(arr_save_n)
 
 
 def test_generate_it_it() -> None:
@@ -317,8 +311,8 @@ def test_generate_it_it() -> None:
         ids = [0, 2, 4, 7, 8, 9]
 
         mnprng1by1 = NamedPrng(mpurposes, particle_type)
-        mnprnglist = NamedPrng(mpurposes, particle_type)
-        mnprngrang = NamedPrng(mpurposes, particle_type)
+        mnprng_list = NamedPrng(mpurposes, particle_type)
+        mnprng_rang = NamedPrng(mpurposes, particle_type)
 
         p_type = "quarks"
         purpose = mpurposes[0]  # random_walk
@@ -333,10 +327,10 @@ def test_generate_it_it() -> None:
             ret_col = mnprng1by1.generate(Distr.STN, [p_type, purpose])
             ret1by1[count] = ret_col
 
-        retlist = mnprnglist.generate_it(Distr.STN, (p_type, purpose, ids))
-        retrang[0:3] = mnprngrang.generate_it(
+        retlist = mnprng_list.generate_it(Distr.STN, (p_type, purpose, ids))
+        retrang[0:3] = mnprng_rang.generate_it(
             Distr.STN, (p_type, purpose, range(0, 6, 2)))
-        retrang[3:6] = mnprngrang.generate_it(
+        retrang[3:6] = mnprng_rang.generate_it(
             Distr.STN, (p_type, purpose, range(7, 10)))
 
         assert pytest.approx(ret1by1) == retlist
@@ -425,7 +419,7 @@ def test_unsupported_rnd_type() -> None:
 
 
 def test_generate_same_3d() -> None:
-    """Initilizes engines in 3D and generates prns.
+    """Initializes engines in 3D and generates prns.
 
     Engines are initialized for realizations, ptype and purpose,
     and generates random number for the same setup and checks if
@@ -517,3 +511,19 @@ def test_seed_logic_get() -> None:
 
     mnprng = NamedPrng(mpurposes, mparticles, seed_logic=(800, 3, 1, 2))
     assert (800, 3, 1, 2) == mnprng.get_seed_logic()
+
+
+def test_seed_shift() -> None:
+    """Test if the realization shift works.
+
+    I don't know why anybody would use the seed shift,
+    it has no physical meaning."""
+    mnprng_1 = NamedPrng(mpurposes, mparticles)
+    mnprng_1.init_prngs(10)
+    result_1 = mnprng_1.generate(Distr.UNI, ("quarks", "random_walk"))
+
+    mnprng_2 = NamedPrng(mpurposes, mparticles, seed_logic=(100, 10, 0, 10))
+    mnprng_2.init_prngs(0)
+    result_2 = mnprng_2.generate(Distr.UNI, ("quarks", "random_walk"))
+
+    assert numpy.equal(result_1, result_2).all()
