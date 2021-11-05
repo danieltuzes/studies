@@ -568,3 +568,27 @@ def test_trigger_bare_str_ptype_purpose_warning() -> None:
     prng_implicit = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
 
     assert numpy.equal(prng_explicit, prng_implicit).all()
+
+
+def test_independent_ptype_real_time() -> None:
+    """Test if prngs are indeed generation order-independent."""
+    mnprng = NamedPrng(mpurposes, mparticles)
+    mnprng.init_prngs([1, 2], ["quarks", "atoms"], "random_walk")
+    a_1 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+    a_2 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 2])
+    a_3 = mnprng.generate(Distr.UNI, ["atoms", "random_walk", 1])
+    a_4 = mnprng.generate(Distr.UNI, ["atoms", "random_walk", 2])
+    a_1_2 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+
+    mnprng.init_prngs([1, 2], ["quarks", "atoms"], "random_walk")
+    b_1 = mnprng.generate(Distr.UNI, ["atoms", "random_walk", 2])
+    b_2 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+    b_3 = mnprng.generate(Distr.UNI, ["atoms", "random_walk", 1])
+    b_4 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 2])
+    b_2_2 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+
+    assert numpy.equal(a_1, b_2).all()
+    assert numpy.equal(a_2, b_4).all()
+    assert numpy.equal(a_3, b_3).all()
+    assert numpy.equal(a_4, b_1).all()
+    assert numpy.equal(a_1_2, b_2_2).all()
