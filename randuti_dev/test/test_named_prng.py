@@ -527,3 +527,44 @@ def test_seed_shift() -> None:
     result_2 = mnprng_2.generate(Distr.UNI, ("quarks", "random_walk"))
 
     assert numpy.equal(result_1, result_2).all()
+
+
+def test_range_inited_with_single() -> None:
+    """What happens if multiple realizations are initialized but only for a single one is used."""
+    mnprng = NamedPrng(mpurposes, mparticles)
+    mnprng.init_prngs([1, 2], ["quarks"], ["random_walk"])
+    rnds12_1 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+    rnds12_2 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 2])
+
+    mnprng.init_prngs(1, ["quarks"], ["random_walk"])
+    rnds1_1 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+
+    mnprng.init_prngs(2, ["quarks"], ["random_walk"])
+    rnds2_2 = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 2])
+
+    assert numpy.equal(rnds12_1, rnds1_1).all()
+    assert numpy.equal(rnds12_2, rnds2_2).all()
+
+
+def test_trigger_impl_real_warning() -> None:
+    """Trigger the logging warning for implicit realization values."""
+    mnprng = NamedPrng(mpurposes, mparticles)
+    mnprng.init_prngs([1, 2], ["quarks"], ["random_walk"])
+    prng_explicit = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+
+    mnprng.init_prngs([1, 2], ["quarks"], ["random_walk"])
+    prng_implicit = mnprng.generate(Distr.UNI, ["quarks", "random_walk"])
+
+    assert numpy.equal(prng_explicit, prng_implicit).all()
+
+
+def test_trigger_bare_str_ptype_purpose_warning() -> None:
+    """Trigger the logging warning for implicit realization values."""
+    mnprng = NamedPrng(mpurposes, mparticles)
+    mnprng.init_prngs([1, 2], "quarks", "random_walk")
+    prng_explicit = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+
+    mnprng.init_prngs([1, 2], ["quarks"], ["random_walk"])
+    prng_implicit = mnprng.generate(Distr.UNI, ["quarks", "random_walk", 1])
+
+    assert numpy.equal(prng_explicit, prng_implicit).all()

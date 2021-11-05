@@ -7,9 +7,10 @@ Check out examples.py for examples!
 from enum import Enum, auto
 import pickle
 from typing import Dict, Iterable, Tuple, List, Union
+import logging
 import numpy
 
-__version__ = "1.2.2"  # single source of truth
+__version__ = "1.2.3"  # single source of truth
 
 
 class FStrat(Enum):
@@ -298,13 +299,24 @@ class NamedPrng:
         """
         if ptypes is None:
             ptypes = self._particles
+        elif isinstance(ptypes, str):
+            logging.error("prng is initialized with a ptype of type str, "
+                          "but it should be a list of str. "
+                          "ptype is packed into a list.")
+            ptypes = [ptypes]
         if purposes is None:
             purposes = self._purposes
+        elif isinstance(purposes, str):
+            logging.error("prng is initialized with a purposes of type str, "
+                          "but it should be a list of str. "
+                          "purposes is packed into a list.")
+            purposes = [purposes]
 
         if isinstance(realizations, int):
             realizations = [realizations]
 
-        self._engines = {}
+        self._engines: Dict[int,
+                            Dict[int, Dict[int, numpy.random.Generator]]] = {}
         for r in realizations:  # pylint: disable=invalid-name
             self._engines[r] = {}
             for t in ptypes:  # pylint: disable=invalid-name
@@ -442,10 +454,7 @@ class NamedPrng:
         ptype = seed_args[0]
         purpose = seed_args[1]
 
-        if len(seed_args) == 2 or not hasattr(seed_args[2], "__len__"):
-            realizations = [[*self._engines][0]]
-        else:
-            realizations = seed_args[2]
+        realizations = self._get_realz(seed_args)
 
         nof_r = len(realizations)
 
@@ -484,6 +493,23 @@ class NamedPrng:
             return ret[0]
 
         return ret
+
+    def _get_realz(self,
+                   seed_args: Tuple[str,
+                                    str,
+                                    Union[int, Iterable]]) -> List[int]:
+        if len(seed_args) == 2:
+            if len(self._engines) > 1:
+                logging.error("prn generate is requested when multiple realizations "
+                              "are initialized, but no realization is specified at call. "
+                              "Random numbers are still generated, but realization should be"
+                              "specified to individual-level comparability.")
+            realizations = [[*self._engines][0]]
+        elif not hasattr(seed_args[2], "__len__"):
+            realizations = [seed_args[2]]
+        else:
+            realizations = seed_args[2]
+        return realizations
 
     def _get_amounts(self,
                      ptype: str,
